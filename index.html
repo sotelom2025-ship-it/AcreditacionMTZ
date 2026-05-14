@@ -903,6 +903,70 @@
     .stat-value { font-size: 22px; }
   }
   .hidden { display: none !important; }
+
+  /* ===== CHECK-IN CARDS ===== */
+  .ci-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .ci-card {
+    border-radius: 14px;
+    padding: 16px;
+    border: 2px solid var(--gray2);
+    background: white;
+    position: relative;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .ci-card.pendiente { border-color: var(--gray2); background: white; }
+  .ci-card.amarillo  { border-color: #eab308; background: linear-gradient(135deg, #fefce8, #fef9c3); }
+  .ci-card.naranja   { border-color: #f97316; background: linear-gradient(135deg, #fff7ed, #fed7aa); }
+  .ci-card.verde     { border-color: #22c55e; background: linear-gradient(135deg, #f0fdf4, #bbf7d0); }
+  .ci-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .ci-escuela { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 15px; color: var(--blue); }
+  .ci-nro { font-size: 12px; font-weight: 700; color: var(--text-light); }
+  .ci-status-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
+  }
+  .ci-card.pendiente .ci-status-dot { background: var(--gray2); }
+  .ci-card.amarillo  .ci-status-dot { background: #eab308; box-shadow: 0 0 6px rgba(234,179,8,0.5); }
+  .ci-card.naranja   .ci-status-dot { background: #f97316; box-shadow: 0 0 6px rgba(249,115,22,0.5); }
+  .ci-card.verde     .ci-status-dot { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+  .ci-controls { display: flex; gap: 6px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .ci-log {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .ci-delete {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(0,0,0,0.06);
+    border: none;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-light);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .ci-delete:hover { background: var(--danger); color: white; }
+  @media (max-width: 480px) {
+    .ci-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ci-escuela { font-size: 13px; }
+  }
 </style>
 </head>
 <body>
@@ -977,6 +1041,9 @@
         </button>
         <button class="nav-item" onclick="showPage('checklist')" id="nav-checklist">
           <span class="nav-icon">✅</span> Planilla de Entrega
+        </button>
+        <button class="nav-item" onclick="showPage('checkin')" id="nav-checkin">
+          <span class="nav-icon">📦</span> <span id="nav-checkin-label">Check-in Tablets</span>
         </button>
         <button class="nav-item" onclick="showPage('resumen')" id="nav-resumen">
           <span class="nav-icon">📊</span> Resumen del Día
@@ -1209,6 +1276,14 @@
               <textarea id="cfg-cargos" rows="8" style="font-size:13px;"></textarea>
             </div>
           </div>
+          <div class="config-card">
+            <div class="config-card-title">📦 Check-in de Elementos</div>
+            <div class="form-group">
+              <label>Nombre del elemento a entregar</label>
+              <input type="text" id="cfg-checkin-item" placeholder="ej: Tablet, Notebook, Kit...">
+            </div>
+            <p style="font-size:12px;color:var(--text-light);margin-top:8px">Este nombre aparecerá en el módulo de check-in y en los reportes.</p>
+          </div>
           <div class="config-card" style="grid-column:1/-1">
             <div class="config-card-title">🔗 Google Sheets</div>
             <div class="form-grid">
@@ -1285,6 +1360,77 @@
               Listo para sincronizar...
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ===== CHECK-IN ===== -->
+      <div id="page-checkin" class="hidden">
+        <div class="page-header">
+          <div class="page-title">
+            <span id="checkin-page-title">Check-in Tablets</span>
+            <span>Registrá la entrega por establecimiento y número</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-cyan btn-sm" onclick="exportCheckin()">📤 Exportar</button>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div><div class="stat-value" id="ci-stat-verde">0</div><div class="stat-label">Completos</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">🟠</div>
+            <div><div class="stat-value" id="ci-stat-naranja">0</div><div class="stat-label">2do control</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#fefce0,#fef3b5)">🟡</div>
+            <div><div class="stat-value" id="ci-stat-amarillo">0</div><div class="stat-label">1er control</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">📭</div>
+            <div><div class="stat-value" id="ci-stat-pendiente">0</div><div class="stat-label">Sin control</div></div>
+          </div>
+        </div>
+
+        <!-- Agregar manual -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <div class="card-title">➕ Agregar establecimiento</div>
+          </div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Establecimiento *</label>
+                <input type="text" id="ci-escuela" placeholder="Nombre del establecimiento">
+              </div>
+              <div class="form-group">
+                <label>Nro *</label>
+                <input type="text" id="ci-nro" placeholder="Nro">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary btn-sm" onclick="agregarCheckin()">➕ Agregar</button>
+              <button class="btn btn-cyan btn-sm" onclick="importarDeRegistros()">📋 Importar desde Registros</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📦 <span id="checkin-card-title">Estado de Tablets</span></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input class="search-input" id="ci-search" placeholder="🔍 Buscar..." oninput="filterCheckin()" style="width:200px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span class="chip" style="background:#fef9c3;color:#854d0e;cursor:pointer" onclick="filterCheckinBy('amarillo')">🟡 1er ctrl</span>
+                <span class="chip" style="background:#fed7aa;color:#9a3412;cursor:pointer" onclick="filterCheckinBy('naranja')">🟠 2do ctrl</span>
+                <span class="chip chip-green" style="cursor:pointer" onclick="filterCheckinBy('verde')">🟢 Completo</span>
+                <span class="chip chip-blue" style="cursor:pointer" onclick="filterCheckinBy('')">Todos</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body" id="checkin-container" style="padding:12px"></div>
         </div>
       </div>
 
@@ -1371,6 +1517,9 @@
       <button class="mobile-nav-item" onclick="showPage('checklist')" id="mnav-checklist">
         <span class="nav-icon">✅</span>Entregas
       </button>
+      <button class="mobile-nav-item" onclick="showPage('checkin')" id="mnav-checkin">
+        <span class="nav-icon">📦</span>Check-in
+      </button>
       <button class="mobile-nav-item" onclick="showPage('resumen')" id="mnav-resumen">
         <span class="nav-icon">📊</span>Resumen
       </button>
@@ -1427,6 +1576,38 @@
   </div>
 </div>
 
+<!-- MODAL EDITAR USUARIO -->
+<div class="modal-overlay" id="modal-editar-usuario">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Editar Usuario</div>
+      <button class="modal-close" onclick="closeModal('modal-editar-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eu-idx">
+      <div class="form-group">
+        <label>Nombre de usuario *</label>
+        <input type="text" id="eu-user" placeholder="Nombre de usuario">
+      </div>
+      <div class="form-group">
+        <label>Nueva contraseña <span style="font-weight:400;color:var(--text-light)">(dejá vacío para no cambiar)</span></label>
+        <input type="password" id="eu-pass" placeholder="Nueva contraseña">
+      </div>
+      <div class="form-group">
+        <label>Rol *</label>
+        <select id="eu-rol">
+          <option value="operator">Operador</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="guardarEdicionUsuario()">💾 Guardar cambios</button>
+        <button class="btn btn-ghost" onclick="closeModal('modal-editar-usuario')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOASTS -->
 <div class="toast-container" id="toast-container"></div>
 
@@ -1445,12 +1626,26 @@ const DB = {
 function initDefaults() {
   if (!DB.get('users')) {
     DB.set('users', [
-      { username: 'admin', password: 'admin123', role: 'admin' },
+      { username: 'Torales', password: 'mtz', role: 'admin' },
       { username: 'operador', password: 'op123', role: 'operator' },
     ]);
+  } else {
+    // Migrate old default admin credentials to Torales/mtz
+    const users = DB.get('users', []);
+    let changed = false;
+    const oldAdmin = users.findIndex(u => (u.username === 'admin' || u.username === 'Torales') && u.role === 'admin');
+    if (oldAdmin >= 0) {
+      if (users[oldAdmin].username === 'admin') {
+        users[oldAdmin].username = 'Torales';
+        users[oldAdmin].password = 'mtz';
+        changed = true;
+      }
+    }
+    if (changed) DB.set('users', users);
   }
   if (!DB.get('registros')) DB.set('registros', []);
   if (!DB.get('checklist')) DB.set('checklist', {});
+  if (!DB.get('checkin')) DB.set('checkin', {});
   if (!DB.get('config')) {
     DB.set('config', {
       localidades: ['González Catán','Isidro Casanova','La Tablada','Lomas del Mirador','Ramos Mejía','San Justo','Tapiales','Virrey del Pino','Ciudad Evita','Rafael Castillo','Laferrere','Gregorio de Laferrere'],
@@ -1458,7 +1653,11 @@ function initDefaults() {
       sheetsUrl: '',
       sheetNameReg: 'Registros',
       sheetNameCheck: 'Checklist',
+      checkinItem: 'Tablet',
     });
+  } else {
+    const cfg = DB.get('config');
+    if (!cfg.checkinItem) { cfg.checkinItem = 'Tablet'; DB.set('config', cfg); }
   }
 }
 
@@ -1527,6 +1726,7 @@ function showPage(name) {
 
   if(name==='registros') renderRegistros();
   if(name==='checklist') renderChecklist();
+  if(name==='checkin') renderCheckin();
   if(name==='usuarios') renderUsuarios();
   if(name==='config') loadConfigForm();
   if(name==='sincronizar') renderSyncPage();
@@ -1563,6 +1763,7 @@ function loadConfigForm() {
   document.getElementById('cfg-sheets-url').value = cfg.sheetsUrl || '';
   document.getElementById('cfg-sheet-name-reg').value = cfg.sheetNameReg || 'Registros';
   document.getElementById('cfg-sheet-name-check').value = cfg.sheetNameCheck || 'Checklist';
+  document.getElementById('cfg-checkin-item').value = cfg.checkinItem || 'Tablet';
 }
 
 function saveConfig() {
@@ -1572,8 +1773,10 @@ function saveConfig() {
   cfg.sheetsUrl = document.getElementById('cfg-sheets-url').value.trim();
   cfg.sheetNameReg = document.getElementById('cfg-sheet-name-reg').value.trim();
   cfg.sheetNameCheck = document.getElementById('cfg-sheet-name-check').value.trim();
+  cfg.checkinItem = document.getElementById('cfg-checkin-item').value.trim() || 'Tablet';
   DB.set('config', cfg);
   loadConfig();
+  updateCheckinLabels();
   toast('✅ Configuración guardada', 'success');
 }
 
@@ -1810,7 +2013,8 @@ function renderUsuarios() {
       <td><span class="chip ${u.role==='admin'?'chip-orange':'chip-blue'}">${u.role==='admin'?'🔑 Admin':'👤 Operador'}</span></td>
       <td><span class="chip chip-green">✅ Activo</span></td>
       <td><div class="td-actions">
-        ${u.username!=='admin'?`<button class="btn btn-danger btn-sm btn-icon" onclick="eliminarUsuario(${i})" title="Eliminar">🗑️</button>`:'<span style="color:var(--text-light);font-size:12px">Protegido</span>'}
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="editarUsuario(${i})" title="Editar">✏️</button>
+        ${u.username!==currentUser.username?`<button class="btn btn-danger btn-sm btn-icon" onclick="eliminarUsuario(${i})" title="Eliminar">🗑️</button>`:''}
       </div></td>
     </tr>
   `).join('');
@@ -1834,6 +2038,41 @@ function guardarUsuario() {
   closeModal('modal-usuario');
   renderUsuarios();
   toast('✅ Usuario creado', 'success');
+}
+
+function editarUsuario(idx) {
+  const users = DB.get('users', []);
+  const u = users[idx];
+  if(!u) return;
+  document.getElementById('eu-idx').value = idx;
+  document.getElementById('eu-user').value = u.username;
+  document.getElementById('eu-pass').value = '';
+  document.getElementById('eu-rol').value = u.role;
+  document.getElementById('modal-editar-usuario').classList.add('open');
+}
+
+function guardarEdicionUsuario() {
+  const idx = parseInt(document.getElementById('eu-idx').value);
+  const newUser = document.getElementById('eu-user').value.trim();
+  const newPass = document.getElementById('eu-pass').value.trim();
+  const newRol = document.getElementById('eu-rol').value;
+  if(!newUser) { toast('⚠️ El nombre de usuario no puede estar vacío','warning'); return; }
+  const users = DB.get('users', []);
+  // check duplicate username (excluding self)
+  if(users.find((u,i) => u.username===newUser && i!==idx)) { toast('❌ Ese nombre de usuario ya existe','error'); return; }
+  const oldUsername = users[idx].username;
+  users[idx].username = newUser;
+  if(newPass) users[idx].password = newPass;
+  users[idx].role = newRol;
+  DB.set('users', users);
+  // update currentUser if editing self
+  if(currentUser.username === oldUsername) {
+    currentUser.username = newUser;
+    document.getElementById('header-username').textContent = newUser;
+  }
+  closeModal('modal-editar-usuario');
+  renderUsuarios();
+  toast('✅ Usuario actualizado', 'success');
 }
 
 function eliminarUsuario(idx) {
@@ -2231,6 +2470,182 @@ function descargarAcreditacion() {
     window.print();
     setTimeout(() => { printDiv.style.display = 'none'; }, 500);
   }, 150);
+}
+
+// ============================================================
+// CHECK-IN
+// ============================================================
+let checkinFilter = '';
+
+function updateCheckinLabels() {
+  const cfg = DB.get('config');
+  const item = cfg.checkinItem || 'Tablet';
+  const els = [
+    document.getElementById('nav-checkin-label'),
+    document.getElementById('checkin-page-title'),
+    document.getElementById('checkin-card-title'),
+  ];
+  els.forEach(el => { if(el) { 
+    if(el.id==='nav-checkin-label') el.textContent = 'Check-in ' + item + 's';
+    else if(el.id==='checkin-page-title') el.textContent = 'Check-in ' + item + 's';
+    else el.textContent = 'Estado de ' + item + 's';
+  }});
+}
+
+function agregarCheckin() {
+  const esc = document.getElementById('ci-escuela').value.trim();
+  const nro = document.getElementById('ci-nro').value.trim();
+  if(!esc||!nro) { toast('⚠️ Completá establecimiento y número','warning'); return; }
+  const checkin = DB.get('checkin', {});
+  const key = esc + '_' + nro;
+  if(checkin[key]) { toast('⚠️ Ese establecimiento ya está en la lista','warning'); return; }
+  checkin[key] = { escuela: esc, nro, controles: [], estado: 'pendiente' };
+  DB.set('checkin', checkin);
+  document.getElementById('ci-escuela').value = '';
+  document.getElementById('ci-nro').value = '';
+  renderCheckin();
+  toast('✅ Establecimiento agregado','success');
+}
+
+function importarDeRegistros() {
+  const regs = DB.get('registros', []);
+  const checkin = DB.get('checkin', {});
+  let nuevos = 0;
+  regs.forEach(r => {
+    const key = r.escuela + '_' + r.nroEscuela;
+    if(!checkin[key]) {
+      checkin[key] = { escuela: r.escuela, nro: r.nroEscuela, controles: [], estado: 'pendiente' };
+      nuevos++;
+    }
+  });
+  DB.set('checkin', checkin);
+  renderCheckin();
+  toast(nuevos > 0 ? `✅ ${nuevos} establecimientos importados` : 'ℹ️ No hay establecimientos nuevos para importar', nuevos>0?'success':'warning');
+}
+
+function registrarControl(key) {
+  const checkin = DB.get('checkin', {});
+  if(!checkin[key]) return;
+  const item = checkin[key];
+  if(item.controles.length >= 3) { toast('✅ Ya tiene los 3 controles completados','warning'); return; }
+  const cfg = DB.get('config');
+  item.controles.push({ fecha: new Date().toISOString(), operador: currentUser.username, elemento: cfg.checkinItem||'Tablet' });
+  const n = item.controles.length;
+  item.estado = n===1?'amarillo':n===2?'naranja':'verde';
+  DB.set('checkin', checkin);
+  renderCheckin();
+  const labels = ['','1er control ✅','2do control ✅','¡Completo! ✅'];
+  toast(`📦 ${item.escuela} — ${labels[n]}`, 'success');
+}
+
+function deshacerControl(key) {
+  const checkin = DB.get('checkin', {});
+  if(!checkin[key] || !checkin[key].controles.length) return;
+  checkin[key].controles.pop();
+  const n = checkin[key].controles.length;
+  checkin[key].estado = n===0?'pendiente':n===1?'amarillo':'naranja';
+  DB.set('checkin', checkin);
+  renderCheckin();
+  toast('↩️ Control deshecho','warning');
+}
+
+function eliminarCheckin(key) {
+  if(!confirm('¿Eliminar este establecimiento del check-in?')) return;
+  const checkin = DB.get('checkin', {});
+  delete checkin[key];
+  DB.set('checkin', checkin);
+  renderCheckin();
+}
+
+function filterCheckinBy(estado) {
+  checkinFilter = estado;
+  renderCheckin();
+}
+
+function filterCheckin() {
+  renderCheckin();
+}
+
+function renderCheckin() {
+  updateCheckinLabels();
+  const checkin = DB.get('checkin', {});
+  const cfg = DB.get('config');
+  const item = cfg.checkinItem || 'Tablet';
+  const search = (document.getElementById('ci-search')||{value:''}).value.toLowerCase();
+  const allKeys = Object.keys(checkin);
+
+  // Stats
+  document.getElementById('ci-stat-verde').textContent = allKeys.filter(k=>checkin[k].estado==='verde').length;
+  document.getElementById('ci-stat-naranja').textContent = allKeys.filter(k=>checkin[k].estado==='naranja').length;
+  document.getElementById('ci-stat-amarillo').textContent = allKeys.filter(k=>checkin[k].estado==='amarillo').length;
+  document.getElementById('ci-stat-pendiente').textContent = allKeys.filter(k=>checkin[k].estado==='pendiente').length;
+
+  const keys = allKeys.filter(k => {
+    const c = checkin[k];
+    const matchSearch = !search || (c.escuela+c.nro).toLowerCase().includes(search);
+    const matchFilter = !checkinFilter || c.estado === checkinFilter;
+    return matchSearch && matchFilter;
+  });
+
+  const container = document.getElementById('checkin-container');
+  if(!keys.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📦</div><p>No hay establecimientos.<br>Agregá uno o importá desde Registros.</p></div>`;
+    return;
+  }
+
+  // Sort: verde > naranja > amarillo > pendiente
+  const order = {verde:0,naranja:1,amarillo:2,pendiente:3};
+  keys.sort((a,b) => (order[checkin[a].estado]||3)-(order[checkin[b].estado]||3));
+
+  const estadoLabel = {pendiente:'Sin control',amarillo:'1er control',naranja:'2do control',verde:'Completo'};
+  const estadoEmoji = {pendiente:'⚪',amarillo:'🟡',naranja:'🟠',verde:'🟢'};
+
+  container.innerHTML = `<div class="ci-grid">${keys.map(k => {
+    const c = checkin[k];
+    const n = c.controles.length;
+    const logHtml = c.controles.map((ctrl,i) => 
+      `<div>Control ${i+1}: ${new Date(ctrl.fecha).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} — ${ctrl.operador}</div>`
+    ).join('');
+    return `
+    <div class="ci-card ${c.estado}">
+      <button class="ci-delete" onclick="eliminarCheckin('${k}')" title="Eliminar">✕</button>
+      <div class="ci-card-header">
+        <div>
+          <div class="ci-escuela">${c.escuela}</div>
+          <div class="ci-nro">Nro: ${c.nro}</div>
+        </div>
+        <div class="ci-status-dot"></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">${estadoEmoji[c.estado]} ${estadoLabel[c.estado]}</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px">${[1,2,3].map(i=>`
+        <div style="flex:1;height:6px;border-radius:3px;background:${i<=n?(c.estado==='amarillo'&&i===1?'#eab308':c.estado==='naranja'&&i<=2?'#f97316':i<=n?'#22c55e':'#e5e7eb'):'#e5e7eb'}"></div>
+      `).join('')}</div>
+      <div class="ci-controls">
+        ${n<3?`<button class="btn btn-sm" style="background:${n===0?'#1a3a6b':n===1?'#f97316':'#22c55e'};color:white;padding:7px 12px;" onclick="registrarControl('${k}')">
+          ✔ Control ${n+1}
+        </button>`:`<span style="font-size:12px;font-weight:800;color:#22c55e">✅ ${item} entregada</span>`}
+        ${n>0?`<button class="btn btn-ghost btn-sm" onclick="deshacerControl('${k}')" title="Deshacer último control">↩️</button>`:''}
+      </div>
+      ${logHtml?`<div class="ci-log">${logHtml}</div>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function exportCheckin() {
+  const checkin = DB.get('checkin', {});
+  const cfg = DB.get('config');
+  const item = cfg.checkinItem || 'Tablet';
+  const rows = Object.values(checkin).map(c => {
+    const logs = c.controles.map((ctrl,i)=>`Control ${i+1}: ${new Date(ctrl.fecha).toLocaleString('es-AR')} (${ctrl.operador})`).join(' | ');
+    return `"${c.escuela}","${c.nro}","${c.estado}","${c.controles.length}","${logs}"`;
+  });
+  const csv = '"Establecimiento","Nro","Estado","Controles","Historial"\n' + rows.join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mtz_checkin_${item}_${Date.now()}.csv`;
+  a.click();
+  toast(`📊 Check-in exportado`, 'success');
 }
 
 // ============================================================
