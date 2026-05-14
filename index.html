@@ -1630,16 +1630,18 @@ function initDefaults() {
       { username: 'operador', password: 'op123', role: 'operator' },
     ]);
   } else {
-    // Migrate old default admin credentials to Torales/mtz
     const users = DB.get('users', []);
     let changed = false;
-    const oldAdmin = users.findIndex(u => (u.username === 'admin' || u.username === 'Torales') && u.role === 'admin');
-    if (oldAdmin >= 0) {
-      if (users[oldAdmin].username === 'admin') {
-        users[oldAdmin].username = 'Torales';
-        users[oldAdmin].password = 'mtz';
-        changed = true;
-      }
+    // Rename 'admin' to 'Torales' if still present
+    users.forEach(u => {
+      if (u.username === 'admin') { u.username = 'Torales'; u.password = 'mtz'; u.role = 'admin'; changed = true; }
+    });
+    // Ensure at least one admin exists; if Torales has wrong role, fix it
+    const hasAdmin = users.some(u => u.role === 'admin');
+    if (!hasAdmin) {
+      const torales = users.find(u => u.username === 'Torales');
+      if (torales) { torales.role = 'admin'; changed = true; }
+      else { users.unshift({ username: 'Torales', password: 'mtz', role: 'admin' }); changed = true; }
     }
     if (changed) DB.set('users', users);
   }
