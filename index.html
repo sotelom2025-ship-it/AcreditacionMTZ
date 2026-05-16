@@ -323,8 +323,12 @@
     text-align: left;
   }
   .nav-item:hover { background: var(--gray); color: var(--blue); }
-  .nav-item.active { background: linear-gradient(135deg, #e8f0ff, #ddf5fa); color: var(--blue); }
-  .nav-item.active .nav-icon { color: var(--cyan); }
+  .nav-item.active { 
+    background: linear-gradient(135deg, #1a3a6b, #2250a0); 
+    color: white;
+    box-shadow: 0 4px 12px rgba(26,58,107,0.3);
+  }
+  .nav-item.active .nav-icon { color: var(--cyan); filter: drop-shadow(0 0 3px rgba(43,188,212,0.6)); }
   .nav-icon { font-size: 18px; width: 22px; text-align: center; }
   .nav-badge {
     margin-left: auto;
@@ -872,8 +876,12 @@
     transition: all 0.2s;
   }
   .mobile-nav-item .nav-icon { font-size: 20px; width: auto; }
-  .mobile-nav-item.active { color: var(--blue); }
-  .mobile-nav-item.active .nav-icon { filter: drop-shadow(0 0 4px rgba(43,188,212,0.4)); }
+  .mobile-nav-item.active { 
+    color: white;
+    background: linear-gradient(135deg, #1a3a6b, #2250a0);
+    box-shadow: 0 2px 8px rgba(26,58,107,0.3);
+  }
+  .mobile-nav-item.active .nav-icon { color: var(--cyan); filter: drop-shadow(0 0 4px rgba(43,188,212,0.8)); }
 
   /* EMPTY STATE */
   .empty-state {
@@ -967,6 +975,15 @@
     .ci-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
     .ci-escuela { font-size: 13px; }
   }
+
+  /* DNI Autocomplete hint */
+  #dni-hint {
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
@@ -1039,19 +1056,19 @@
         <button class="nav-item active" onclick="showPage('registro')" id="nav-registro">
           <span class="nav-icon">📋</span> Nuevo Registro
         </button>
-        <button class="nav-item" onclick="showPage('checklist')" id="nav-checklist">
-          <span class="nav-icon">✅</span> Planilla de Entrega
-        </button>
         <button class="nav-item" onclick="showPage('checkin')" id="nav-checkin">
           <span class="nav-icon">📦</span> <span id="nav-checkin-label">Check-in Tablets</span>
-        </button>
-        <button class="nav-item" onclick="showPage('resumen')" id="nav-resumen">
-          <span class="nav-icon">📊</span> Resumen del Día
         </button>
         <button class="nav-item" onclick="showPage('conexion')" id="nav-conexion">
           <span class="nav-icon">🔗</span> Conexión
         </button>
-        <button class="nav-item admin-only" onclick="showPage('registros')" id="nav-registros">
+      </div>
+      <div class="sidebar-section admin-only">
+        <div class="sidebar-label">Administración</div>
+        <button class="nav-item" onclick="showPage('resumen')" id="nav-resumen">
+          <span class="nav-icon">📊</span> Resumen del Día
+        </button>
+        <button class="nav-item" onclick="showPage('registros')" id="nav-registros">
           <span class="nav-icon">🗂️</span> Ver Registros
           <span class="nav-badge" id="sidebar-count">0</span>
         </button>
@@ -1109,8 +1126,14 @@
               <div class="form-section-title">🏫 Datos del Establecimiento</div>
               <div class="form-grid">
                 <div class="form-group">
-                  <label>Nombre del establecimiento *</label>
-                  <input type="text" id="f-escuela" placeholder="Escuela N°...">
+                  <label>Tipo de escuela *</label>
+                  <select id="f-tipo-escuela" onchange="toggleOtroEscuela()">
+                    <option value="">Seleccioná tipo...</option>
+                  </select>
+                </div>
+                <div class="form-group hidden" id="f-otro-escuela-group">
+                  <label>Especificar tipo *</label>
+                  <input type="text" id="f-otro-escuela" placeholder="Ingresá el tipo de escuela">
                 </div>
                 <div class="form-group">
                   <label>Número de establecimiento *</label>
@@ -1147,7 +1170,8 @@
                 </div>
                 <div class="form-group">
                   <label>DNI *</label>
-                  <input type="text" id="f-dni" placeholder="ej: 30.123.456">
+                  <input type="text" id="f-dni" placeholder="ej: 30.123.456" oninput="autocompletarPorDNI()">
+                  <small id="dni-hint" style="display:none;color:var(--cyan);font-weight:600;margin-top:4px;font-size:12px;">✓ Persona encontrada - datos autocompletados</small>
                 </div>
                 <div class="form-group">
                   <label>Localidad de residencia</label>
@@ -1239,11 +1263,10 @@
             <table id="registros-table">
               <thead>
                 <tr>
-                  <th>Establecimiento</th>
+                  <th>Tipo de Escuela</th>
                   <th>Nro</th>
                   <th>Nombre</th>
                   <th>DNI</th>
-                  <th>Teléfono</th>
                   <th>Cargo</th>
                   <th>Sync</th>
                   <th>Acciones</th>
@@ -1306,6 +1329,26 @@
             <div class="form-actions">
               <button class="btn btn-cyan btn-sm" onclick="testSheets()">🔧 Probar conexión</button>
               <button class="btn btn-orange btn-sm" onclick="syncNow()">🔄 Sincronizar ahora</button>
+            </div>
+          </div>
+          
+          <!-- GESTIÓN DE USUARIOS -->
+          <div class="config-card" style="grid-column:1/-1">
+            <div class="config-card-title">👥 Gestión de Operadores</div>
+            <div style="margin-bottom:16px">
+              <button class="btn btn-primary btn-sm" onclick="openModalUsuario()">➕ Agregar operador</button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="cfg-usuarios-tbody"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1522,13 +1565,23 @@
       <div id="page-resumen" class="hidden">
         <div class="page-header">
           <div class="page-title">
-            Resumen del Día
-            <span id="resumen-fecha-titulo">Hoy</span>
+            Resumen y Estadísticas
+            <span>Análisis de acreditaciones por período</span>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <input type="date" id="resumen-fecha-picker" class="search-input" style="min-width:160px;flex:none;" onchange="renderResumen()">
-            <button class="btn btn-primary btn-sm" onclick="descargarAcreditacion()">🖨️ Descargar Acreditación</button>
-          </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs" style="margin-bottom:24px;">
+          <button class="tab active" onclick="switchResumenTab('diario')" id="tab-diario">📅 Resumen Diario</button>
+          <button class="tab" onclick="switchResumenTab('anual')" id="tab-anual">📊 Resumen Anual</button>
+        </div>
+
+        <!-- RESUMEN DIARIO -->
+        <div id="resumen-diario">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+          <input type="date" id="resumen-fecha-picker" class="search-input" style="min-width:160px;flex:none;" onchange="renderResumen()">
+          <button class="btn btn-primary btn-sm" onclick="descargarAcreditacion()">🖨️ Descargar Acreditación</button>
+          <span id="resumen-fecha-titulo" style="color:var(--text-light);font-weight:600;margin-left:8px;"></span>
         </div>
 
         <!-- MINI STATS DEL DÍA -->
@@ -1540,14 +1593,6 @@
           <div class="stat-card">
             <div class="stat-icon orange">🏫</div>
             <div><div class="stat-value" id="rs-escuelas">0</div><div class="stat-label">Establecimientos</div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon cyan">💼</div>
-            <div><div class="stat-value" id="rs-cargos">0</div><div class="stat-label">Cargos distintos</div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon green">✅</div>
-            <div><div class="stat-value" id="rs-entregas">0</div><div class="stat-label">Entregas del día</div></div>
           </div>
         </div>
 
@@ -1579,12 +1624,60 @@
         <!-- GRÁFICO POR CARGO -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
           <div class="card">
-            <div class="card-header"><div class="card-title">💼 Por cargo</div></div>
-            <div class="card-body" id="resumen-cargos-chart"></div>
+            <div class="card-header"><div class="card-title">🏫 Por tipo de escuela</div></div>
+            <div class="card-body" id="resumen-escuelas-chart"></div>
           </div>
           <div class="card">
             <div class="card-header"><div class="card-title">📍 Por localidad</div></div>
             <div class="card-body" id="resumen-loc-chart"></div>
+          </div>
+        </div>
+        </div><!-- end resumen-diario -->
+
+        <!-- RESUMEN ANUAL -->
+        <div id="resumen-anual" class="hidden">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
+            <select id="anual-year" class="search-input" style="width:120px;" onchange="renderResumenAnual()">
+              <option value="">Seleccioná año...</option>
+            </select>
+            <button class="btn btn-cyan btn-sm" onclick="exportResumenAnual()">📊 Exportar CSV</button>
+          </div>
+
+          <!-- STATS ANUALES -->
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card">
+              <div class="stat-icon blue">📋</div>
+              <div><div class="stat-value" id="ra-total">0</div><div class="stat-label">Total Año</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon orange">🏫</div>
+              <div><div class="stat-value" id="ra-escuelas">0</div><div class="stat-label">Establecimientos</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon cyan">📅</div>
+              <div><div class="stat-value" id="ra-promedio">0</div><div class="stat-label">Promedio/mes</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green">🔝</div>
+              <div><div class="stat-value" id="ra-mes-top">—</div><div class="stat-label">Mes con más</div></div>
+            </div>
+          </div>
+
+          <!-- GRÁFICO POR MES -->
+          <div class="card" style="margin-bottom:18px">
+            <div class="card-header"><div class="card-title">📊 Acreditaciones por mes</div></div>
+            <div class="card-body" id="anual-meses-chart"></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">💼 Distribución por cargo</div></div>
+              <div class="card-body" id="anual-cargos-chart"></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">📍 Distribución por localidad</div></div>
+              <div class="card-body" id="anual-loc-chart"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1598,17 +1691,14 @@
       <button class="mobile-nav-item active" onclick="showPage('registro')" id="mnav-registro">
         <span class="nav-icon">📋</span>Registro
       </button>
-      <button class="mobile-nav-item" onclick="showPage('checklist')" id="mnav-checklist">
-        <span class="nav-icon">✅</span>Entregas
-      </button>
       <button class="mobile-nav-item" onclick="showPage('checkin')" id="mnav-checkin">
         <span class="nav-icon">📦</span>Check-in
       </button>
-      <button class="mobile-nav-item" onclick="showPage('resumen')" id="mnav-resumen">
-        <span class="nav-icon">📊</span>Resumen
-      </button>
       <button class="mobile-nav-item" onclick="showPage('conexion')" id="mnav-conexion">
         <span class="nav-icon">🔗</span>Conexión
+      </button>
+      <button class="mobile-nav-item admin-only" onclick="showPage('resumen')" id="mnav-resumen">
+        <span class="nav-icon">📊</span>Resumen
       </button>
       <button class="mobile-nav-item admin-only" onclick="showPage('registros')" id="mnav-registros">
         <span class="nav-icon">🗂️</span>Ver Todo
@@ -1647,6 +1737,38 @@
       <div class="form-actions">
         <button class="btn btn-primary" onclick="guardarUsuario()">💾 Guardar</button>
         <button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR USUARIO -->
+<div class="modal-overlay" id="modal-editar-usuario">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Editar Usuario</div>
+      <button class="modal-close" onclick="closeModal('modal-editar-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eu-idx">
+      <div class="form-group">
+        <label>Nombre de usuario *</label>
+        <input type="text" id="eu-user" placeholder="usuario">
+      </div>
+      <div class="form-group">
+        <label>Nueva contraseña <span style="font-weight:400;color:var(--text-light)">(dejá vacío para no cambiar)</span></label>
+        <input type="password" id="eu-pass" placeholder="Nueva contraseña (opcional)">
+      </div>
+      <div class="form-group">
+        <label>Rol *</label>
+        <select id="eu-rol">
+          <option value="operator">Operador</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="guardarEdicionUsuario()">💾 Guardar cambios</button>
+        <button class="btn btn-ghost" onclick="closeModal('modal-editar-usuario')">Cancelar</button>
       </div>
     </div>
   </div>
@@ -1737,7 +1859,8 @@ function initDefaults() {
   if (!DB.get('checkin')) DB.set('checkin', {});
   if (!DB.get('config')) {
     DB.set('config', {
-      localidades: ['González Catán','Isidro Casanova','La Tablada','Lomas del Mirador','Ramos Mejía','San Justo','Tapiales','Virrey del Pino','Ciudad Evita','Rafael Castillo','Laferrere','Gregorio de Laferrere'],
+      localidades: ['San Justo','Ramos Mejía','Lomas del Mirador','La Tablada','Villa Madero','Ciudad Celina','Aldo Bonzi','Tapiales','Ciudad Evita','Villa Luzuriaga','Isidro Casanova','Rafael Castillo','Gregorio de Laferrere','González Catán','Virrey del Pino','20 de Junio'],
+      tiposEscuela: ['Escuela Primaria','Escuela Secundaria','Escuela Técnica','Jardín de Infantes','Instituto de Formación Docente','FINES','Centro de Formación Profesional','Centro de Formación Laboral','CENS','Otro'],
       cargos: ['Director/a','Vice Director/a','Secretario/a','Docente','Auxiliar administrativo','Preceptor/a','Jefe de preceptores','Coordinador/a pedagógico','Portero/a'],
       sheetsUrl: 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec',
       sheetNameReg: 'Registros',
@@ -1745,13 +1868,18 @@ function initDefaults() {
       checkinItem: 'Tablet',
     });
   } else {
-    // Ensure existing configs have the URL if not set
+    // Ensure existing configs have the URL and new fields
     const cfg = DB.get('config');
     if (!cfg.sheetsUrl) {
       cfg.sheetsUrl = 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec';
-      DB.set('config', cfg);
     }
-    if (!cfg.checkinItem) { cfg.checkinItem = 'Tablet'; DB.set('config', cfg); }
+    if (!cfg.checkinItem) cfg.checkinItem = 'Tablet';
+    if (!cfg.tiposEscuela) {
+      cfg.tiposEscuela = ['Escuela Primaria','Escuela Secundaria','Escuela Técnica','Jardín de Infantes','Instituto de Formación Docente','FINES','Centro de Formación Profesional','Centro de Formación Laboral','CENS','Otro'];
+    }
+    // Update localities to new list
+    cfg.localidades = ['San Justo','Ramos Mejía','Lomas del Mirador','La Tablada','Villa Madero','Ciudad Celina','Aldo Bonzi','Tapiales','Ciudad Evita','Villa Luzuriaga','Isidro Casanova','Rafael Castillo','Gregorio de Laferrere','González Catán','Virrey del Pino','20 de Junio'];
+    DB.set('config', cfg);
   }
 }
 
@@ -1833,9 +1961,21 @@ function showPage(name) {
 // ============================================================
 function loadConfig() {
   const cfg = DB.get('config');
+  fillSelect('f-tipo-escuela', cfg.tiposEscuela);
   fillSelect('f-localidad-escuela', cfg.localidades);
   fillSelect('f-localidad-persona', cfg.localidades);
   fillSelect('f-cargo', cfg.cargos);
+}
+
+function toggleOtroEscuela() {
+  const tipo = document.getElementById('f-tipo-escuela').value;
+  const otroGroup = document.getElementById('f-otro-escuela-group');
+  if (tipo === 'Otro') {
+    otroGroup.classList.remove('hidden');
+  } else {
+    otroGroup.classList.add('hidden');
+    document.getElementById('f-otro-escuela').value = '';
+  }
 }
 
 function fillSelect(id, arr) {
@@ -1859,6 +1999,24 @@ function loadConfigForm() {
   document.getElementById('cfg-sheet-name-reg').value = cfg.sheetNameReg || 'Registros';
   document.getElementById('cfg-sheet-name-check').value = cfg.sheetNameCheck || 'Checklist';
   document.getElementById('cfg-checkin-item').value = cfg.checkinItem || 'Tablet';
+  renderUsuariosConfig();
+}
+
+function renderUsuariosConfig() {
+  const users = DB.get('users', []);
+  const tbody = document.getElementById('cfg-usuarios-tbody');
+  if(!tbody) return;
+  
+  tbody.innerHTML = users.map((u,i) => `
+    <tr>
+      <td><strong>${u.username}</strong></td>
+      <td><span class="chip ${u.role==='admin'?'chip-orange':'chip-blue'}">${u.role==='admin'?'🔑 Admin':'👤 Operador'}</span></td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="editarUsuario(${i})" title="Editar">✏️</button>
+        ${u.username!==currentUser.username?`<button class="btn btn-danger btn-sm btn-icon" onclick="eliminarUsuario(${i})" title="Eliminar">🗑️</button>`:''}
+      </div></td>
+    </tr>
+  `).join('');
 }
 
 function saveConfig() {
@@ -1878,10 +2036,47 @@ function saveConfig() {
 // ============================================================
 // REGISTRO FORM
 // ============================================================
+function autocompletarPorDNI() {
+  const dni = document.getElementById('f-dni').value.trim();
+  const hint = document.getElementById('dni-hint');
+  
+  // Hide hint by default
+  if (hint) hint.style.display = 'none';
+  
+  // Need at least 6 digits to search
+  if (dni.length < 6) return;
+  
+  // Search for existing person with this DNI
+  const registros = DB.get('registros', []);
+  const found = registros.find(r => r.dni === dni);
+  
+  if (found) {
+    // Autocomplete personal data (but NOT school data)
+    document.getElementById('f-nombre').value = found.nombre || '';
+    document.getElementById('f-apellido').value = found.apellido || '';
+    document.getElementById('f-telefono').value = found.telefono || '';
+    document.getElementById('f-localidad-persona').value = found.localidadPersona || '';
+    document.getElementById('f-calle').value = found.calle || '';
+    document.getElementById('f-calle-nro').value = found.calleNro || '';
+    document.getElementById('f-correo').value = found.correo || '';
+    document.getElementById('f-cargo').value = found.cargo || '';
+    
+    // Show hint
+    if (hint) hint.style.display = 'block';
+    
+    // Focus on school name field since personal data is filled
+    document.getElementById('f-escuela').focus();
+  }
+}
+
 function getFormData() {
+  const tipoEscuela = document.getElementById('f-tipo-escuela').value;
+  const otroEscuela = document.getElementById('f-otro-escuela').value.trim();
+  const tipoFinal = tipoEscuela === 'Otro' ? otroEscuela : tipoEscuela;
+  
   return {
     id: Date.now().toString(),
-    escuela: document.getElementById('f-escuela').value.trim(),
+    tipoEscuela: tipoFinal,
     nroEscuela: document.getElementById('f-nro-escuela').value.trim(),
     direccion: document.getElementById('f-direccion').value.trim(),
     localidadEscuela: document.getElementById('f-localidad-escuela').value,
@@ -1901,7 +2096,7 @@ function getFormData() {
 }
 
 function validateForm(d) {
-  const req = ['escuela','nroEscuela','direccion','localidadEscuela','nombre','apellido','telefono','dni','cargo'];
+  const req = ['tipoEscuela','nroEscuela','direccion','localidadEscuela','nombre','apellido','telefono','dni','cargo'];
   for(const k of req) {
     if(!d[k]) { toast('⚠️ Completá todos los campos obligatorios (*)','warning'); return false; }
   }
@@ -1926,12 +2121,16 @@ function guardarRegistro() {
 }
 
 function limpiarForm() {
-  ['f-escuela','f-nro-escuela','f-direccion','f-nombre','f-apellido','f-telefono','f-dni','f-calle','f-calle-nro','f-correo'].forEach(id=>{
+  ['f-nro-escuela','f-direccion','f-nombre','f-apellido','f-telefono','f-dni','f-calle','f-calle-nro','f-correo','f-otro-escuela'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value='';
   });
-  ['f-localidad-escuela','f-localidad-persona','f-cargo'].forEach(id=>{
+  ['f-tipo-escuela','f-localidad-escuela','f-localidad-persona','f-cargo'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value='';
   });
+  const otroGroup = document.getElementById('f-otro-escuela-group');
+  if(otroGroup) otroGroup.classList.add('hidden');
+  const dniHint = document.getElementById('dni-hint');
+  if(dniHint) dniHint.style.display='none';
 }
 
 // ============================================================
@@ -1941,21 +2140,23 @@ function renderRegistros(filter='') {
   const registros = DB.get('registros', []).filter(r => {
     if(!filter) return true;
     const q = filter.toLowerCase();
-    return (r.escuela+r.nombre+r.apellido+r.dni+r.cargo).toLowerCase().includes(q);
+    const searchStr = (r.tipoEscuela||'') + r.nroEscuela + r.nombre + r.apellido + r.dni + r.cargo;
+    return searchStr.toLowerCase().includes(q);
   });
   const tbody = document.getElementById('registros-tbody');
   document.getElementById('sidebar-count').textContent = DB.get('registros',[]).length;
   if(!registros.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><p>No hay registros aún</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><p>No hay registros aún</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = registros.map(r=>`
+  tbody.innerHTML = registros.map(r=>{
+    const tipo = r.tipoEscuela || '';
+    return `
     <tr>
-      <td><strong>${r.escuela}</strong></td>
+      <td><strong>${tipo}</strong></td>
       <td>${r.nroEscuela}</td>
       <td>${r.nombre} ${r.apellido}</td>
       <td>${r.dni}</td>
-      <td>${r.telefono}</td>
       <td><span class="chip chip-blue">${r.cargo}</span></td>
       <td>${r.synced ? '<span class="chip chip-green">✅ Sync</span>' : '<span class="chip chip-orange">⏳ Pendiente</span>'}</td>
       <td><div class="td-actions">
@@ -1963,7 +2164,7 @@ function renderRegistros(filter='') {
         <button class="btn btn-danger btn-sm btn-icon" onclick="eliminarRegistro('${r.id}')" title="Eliminar">🗑️</button>
       </div></td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
 function filterRegistros() {
@@ -2132,6 +2333,7 @@ function guardarUsuario() {
   DB.set('users', users);
   closeModal('modal-usuario');
   renderUsuarios();
+  renderUsuariosConfig();
   toast('✅ Usuario creado', 'success');
 }
 
@@ -2167,6 +2369,7 @@ function guardarEdicionUsuario() {
   }
   closeModal('modal-editar-usuario');
   renderUsuarios();
+  renderUsuariosConfig();
   toast('✅ Usuario actualizado', 'success');
 }
 
@@ -2177,6 +2380,7 @@ function eliminarUsuario(idx) {
   users.splice(idx,1);
   DB.set('users', users);
   renderUsuarios();
+  renderUsuariosConfig();
   toast('🗑️ Usuario eliminado','warning');
 }
 
@@ -2395,16 +2599,11 @@ function renderResumen() {
   document.getElementById('resumen-fecha-titulo').textContent = titulo;
 
   const regs = DB.get('registros', []).filter(r => isSameDay(r.fecha, fecha));
-  const checklist = DB.get('checklist', {});
-  const checksDia = Object.values(checklist).filter(c => c.checked && c.fecha && isSameDay(c.fecha, fecha));
 
   // Stats
-  const escuelasUnicas = [...new Set(regs.map(r=>r.escuela+'_'+r.nroEscuela))];
-  const cargosUnicos = [...new Set(regs.map(r=>r.cargo).filter(Boolean))];
+  const escuelasUnicas = [...new Set(regs.map(r=>r.tipoEscuela+'_'+r.nroEscuela))];
   document.getElementById('rs-total').textContent = regs.length;
   document.getElementById('rs-escuelas').textContent = escuelasUnicas.length;
-  document.getElementById('rs-cargos').textContent = cargosUnicos.length;
-  document.getElementById('rs-entregas').textContent = checksDia.length;
   document.getElementById('resumen-count-badge').textContent = regs.length + ' persona' + (regs.length!==1?'s':'');
 
   // Table
@@ -2418,7 +2617,7 @@ function renderResumen() {
         <td><strong>${r.apellido}, ${r.nombre}</strong></td>
         <td>${r.dni}</td>
         <td><span class="chip chip-blue" style="font-size:10px">${r.cargo}</span></td>
-        <td>${r.escuela}</td>
+        <td>${r.tipoEscuela||''}</td>
         <td>${r.nroEscuela}</td>
         <td>${r.localidadEscuela}</td>
         <td>${new Date(r.fecha).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
@@ -2426,9 +2625,9 @@ function renderResumen() {
     `).join('');
   }
 
-  // Bar charts
-  renderBarChart('resumen-cargos-chart', regs, 'cargo', ['#1a3a6b','#2250a0','#2bbcd4','#e87e2a','#27ae60','#9b59b6']);
-  renderBarChart('resumen-loc-chart', regs, 'localidadEscuela', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c']);
+  // Bar charts - por tipo de escuela y por localidad
+  renderBarChart('resumen-escuelas-chart', regs, 'tipoEscuela', ['#1a3a6b','#2250a0','#2bbcd4','#e87e2a','#27ae60','#9b59b6','#3498db','#f39c12','#16a085','#d35400']);
+  renderBarChart('resumen-loc-chart', regs, 'localidadEscuela', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c','#9b59b6','#3498db']);
 }
 
 function renderBarChart(containerId, regs, field, colors) {
@@ -2451,6 +2650,117 @@ function renderBarChart(containerId, regs, field, colors) {
       <div class="bar-count">${count}</div>
     </div>
   `).join('');
+}
+
+// ============================================================
+// RESUMEN ANUAL
+// ============================================================
+function switchResumenTab(tab) {
+  document.getElementById('tab-diario').classList.toggle('active', tab === 'diario');
+  document.getElementById('tab-anual').classList.toggle('active', tab === 'anual');
+  document.getElementById('resumen-diario').classList.toggle('hidden', tab !== 'diario');
+  document.getElementById('resumen-anual').classList.toggle('hidden', tab !== 'anual');
+  
+  if (tab === 'anual') {
+    populateYearSelector();
+    const yearPicker = document.getElementById('anual-year');
+    if (yearPicker.value) renderResumenAnual();
+  }
+}
+
+function populateYearSelector() {
+  const regs = DB.get('registros', []);
+  const years = new Set();
+  regs.forEach(r => {
+    if (r.fecha) {
+      const d = new Date(r.fecha);
+      years.add(d.getFullYear());
+    }
+  });
+  const sorted = Array.from(years).sort((a,b) => b-a);
+  const select = document.getElementById('anual-year');
+  const current = select.value;
+  select.innerHTML = '<option value="">Seleccioná año...</option>' + 
+    sorted.map(y => `<option value="${y}" ${y == current ? 'selected' : ''}>${y}</option>`).join('');
+  if (!current && sorted.length) select.value = sorted[0];
+}
+
+function renderResumenAnual() {
+  const year = document.getElementById('anual-year').value;
+  if (!year) {
+    toast('⚠️ Seleccioná un año', 'warning');
+    return;
+  }
+  
+  const regs = DB.get('registros', []).filter(r => {
+    if (!r.fecha) return false;
+    const d = new Date(r.fecha);
+    return d.getFullYear() == year;
+  });
+  
+  // Stats
+  const escuelasUnicas = new Set();
+  regs.forEach(r => escuelasUnicas.add(r.escuela + '_' + r.nroEscuela));
+  
+  // Por mes
+  const porMes = {};
+  regs.forEach(r => {
+    const d = new Date(r.fecha);
+    const mes = d.getMonth();
+    porMes[mes] = (porMes[mes] || 0) + 1;
+  });
+  
+  const mesMax = Object.keys(porMes).reduce((a,b) => porMes[a] > porMes[b] ? a : b, 0);
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const promedio = regs.length > 0 ? Math.round(regs.length / Object.keys(porMes).length) : 0;
+  
+  document.getElementById('ra-total').textContent = regs.length;
+  document.getElementById('ra-escuelas').textContent = escuelasUnicas.size;
+  document.getElementById('ra-promedio').textContent = promedio;
+  document.getElementById('ra-mes-top').textContent = meses[mesMax];
+  
+  // Chart por mes
+  const mesContainer = document.getElementById('anual-meses-chart');
+  if (Object.keys(porMes).length === 0) {
+    mesContainer.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px">Sin datos</p>';
+  } else {
+    const maxMes = Math.max(...Object.values(porMes));
+    mesContainer.innerHTML = Array.from({length:12}, (_,i) => i).map(m => {
+      const count = porMes[m] || 0;
+      const pct = maxMes > 0 ? Math.round(count/maxMes*100) : 0;
+      const colors = ['#1a3a6b','#2250a0','#2bbcd4','#1a9fb8','#e87e2a','#27ae60','#9b59b6','#e74c3c','#3498db','#f39c12','#16a085','#d35400'];
+      return `<div class="bar-item"><div class="bar-label">${meses[m]}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${colors[m]}"></div></div><div class="bar-count">${count}</div></div>`;
+    }).join('');
+  }
+  
+  // Charts por cargo y localidad
+  renderBarChart('anual-cargos-chart', regs, 'cargo', ['#1a3a6b','#2250a0','#2bbcd4','#e87e2a','#27ae60','#9b59b6']);
+  renderBarChart('anual-loc-chart', regs, 'localidadEscuela', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c']);
+}
+
+function exportResumenAnual() {
+  const year = document.getElementById('anual-year').value;
+  if (!year) { toast('⚠️ Seleccioná un año primero', 'warning'); return; }
+  
+  const regs = DB.get('registros', []).filter(r => {
+    if (!r.fecha) return false;
+    return new Date(r.fecha).getFullYear() == year;
+  });
+  
+  if (!regs.length) { toast('⚠️ No hay datos para este año', 'warning'); return; }
+  
+  const headers = ['Fecha','Establecimiento','Nro','Nombre','Apellido','DNI','Cargo','Localidad','Operador'];
+  const rows = regs.map(r => [
+    new Date(r.fecha).toLocaleDateString('es-AR'),
+    r.escuela, r.nroEscuela, r.nombre, r.apellido, r.dni, r.cargo, r.localidadEscuela, r.operador
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => '"' + (c || '') + '"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mtz_resumen_anual_${year}.csv`;
+  a.click();
+  toast('📊 Resumen anual exportado', 'success');
 }
 
 // ============================================================
