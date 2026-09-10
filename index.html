@@ -1478,6 +1478,10 @@
             <div class="stat-icon orange">❌</div>
             <div><div class="stat-value" id="ci-stat-ausente">0</div><div class="stat-label">Ausentes</div></div>
           </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#e5e7eb,#cbd5e1)">⚪</div>
+            <div><div class="stat-value" id="ci-stat-sinmarcar">0</div><div class="stat-label">Sin marcar</div></div>
+          </div>
         </div>
 
         <!-- Agregar manual -->
@@ -1521,6 +1525,7 @@
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <span class="chip chip-green" style="cursor:pointer" onclick="filterCheckinBy('presente')">✅ Presentes</span>
                 <span class="chip" style="background:#fed7aa;color:#9a3412;cursor:pointer" onclick="filterCheckinBy('ausente')">❌ Ausentes</span>
+                <span class="chip" style="background:#e5e7eb;color:#475569;cursor:pointer" onclick="filterCheckinBy('sinmarcar')">⚪ Sin marcar</span>
                 <span class="chip chip-blue" style="cursor:pointer" onclick="filterCheckinBy('')">Todos</span>
               </div>
             </div>
@@ -2606,11 +2611,17 @@ async function syncCheckinNow() {
 }
 
 function parseFechaSheet(str) {
-  // Formato: dd/MM/yyyy HH:mm:ss
+  // Formato esperado: d/M/yyyy H:mm(:ss) — tolerante a falta de ceros a la izquierda
   if(!str) return null;
-  const m = String(str).match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):?(\d{2})?/);
-  if(!m) return null;
-  return new Date(m[3], m[2]-1, m[1], m[4], m[5], m[6]||0).toISOString();
+  const s = String(str).trim();
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+  if(m) {
+    return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)).toISOString();
+  }
+  // Si Google Sheets lo devolvió como fecha ISO nativa (por venir como objeto Date del backend)
+  const d = new Date(s);
+  if(!isNaN(d.getTime())) return d.toISOString();
+  return null;
 }
 
 async function cargarCheckinDesdeNube(silent) {
@@ -2666,17 +2677,27 @@ async function cargarCheckinDesdeNube(silent) {
         operador: row['Compañero'] || null,
         synced: true,
       };
+      const remoteTieneEstado = estado === 'Presente' || estado === 'Ausente';
       
       if(!local[key]) {
         local[key] = remoto;
         nuevos++;
       } else {
-        const fechaLocal = local[key].fecha ? new Date(local[key].fecha).getTime() : 0;
-        const fechaRemota = remoto.fecha ? new Date(remoto.fecha).getTime() : 0;
-        if(fechaRemota > fechaLocal) {
+        const localTieneEstado = !!local[key].fecha;
+        if(!localTieneEstado && remoteTieneEstado) {
+          // Local nunca se tocó, pero la nube ya tiene un estado real: usar el de la nube
           local[key] = remoto;
           actualizados++;
+        } else if(localTieneEstado && remoteTieneEstado) {
+          // Ambos tienen estado real: gana el más reciente por fecha
+          const fechaLocal = local[key].fecha ? new Date(local[key].fecha).getTime() : 0;
+          const fechaRemota = remoto.fecha ? new Date(remoto.fecha).getTime() : 0;
+          if(fechaRemota > fechaLocal) {
+            local[key] = remoto;
+            actualizados++;
+          }
         }
+        // Si local tiene estado y la nube no, se mantiene el local (no se pisa con vacío)
       }
     });
     
@@ -3316,15 +3337,17 @@ function renderCheckin() {
 
   // Stats
   const presentesCount = allKeys.filter(k=>checkin[k].presente).length;
-  const ausentesCount = allKeys.length - presentesCount;
+  const ausentesCount = allKeys.filter(k=>!checkin[k].presente && checkin[k].fecha).length;
+  const sinMarcarCount = allKeys.length - presentesCount - ausentesCount;
   document.getElementById('ci-stat-total').textContent = allKeys.length;
   document.getElementById('ci-stat-presente').textContent = presentesCount;
   document.getElementById('ci-stat-ausente').textContent = ausentesCount;
+  document.getElementById('ci-stat-sinmarcar').textContent = sinMarcarCount;
 
   const keys = allKeys.filter(k => {
     const c = checkin[k];
     const matchSearch = !search || (c.escuela+c.nro+(c.categoria||'')).toLowerCase().includes(search);
-    const estado = c.presente ? 'presente' : 'ausente';
+    const estado = c.presente ? 'presente' : (c.fecha ? 'ausente' : 'sinmarcar');
     const matchFilter = !checkinFilter || estado === checkinFilter;
     return matchSearch && matchFilter;
   });
