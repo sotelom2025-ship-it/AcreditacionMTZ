@@ -1523,7 +1523,8 @@
             <span>Registrá la presencia por establecimiento</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-orange btn-sm" onclick="syncCheckinNow()">🔄 Sincronizar</button>
+            <button class="btn btn-orange btn-sm" onclick="syncCheckinNow()">🔄 Subir cambios</button>
+            <button class="btn btn-primary btn-sm" onclick="cargarCheckinDesdeNube()">☁️ Traer de la nube</button>
             <button class="btn btn-cyan btn-sm" onclick="exportCheckin()">📤 Exportar</button>
           </div>
         </div>
@@ -1875,38 +1876,6 @@
   </div>
 </div>
 
-<!-- MODAL EDITAR USUARIO -->
-<div class="modal-overlay" id="modal-editar-usuario">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">✏️ Editar Usuario</div>
-      <button class="modal-close" onclick="closeModal('modal-editar-usuario')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="eu-idx">
-      <div class="form-group">
-        <label>Nombre de usuario *</label>
-        <input type="text" id="eu-user" placeholder="Nombre de usuario">
-      </div>
-      <div class="form-group">
-        <label>Nueva contraseña <span style="font-weight:400;color:var(--text-light)">(dejá vacío para no cambiar)</span></label>
-        <input type="password" id="eu-pass" placeholder="Nueva contraseña">
-      </div>
-      <div class="form-group">
-        <label>Rol *</label>
-        <select id="eu-rol">
-          <option value="operator">Compañero</option>
-          <option value="admin">Administrador</option>
-        </select>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-primary" onclick="guardarEdicionUsuario()">💾 Guardar cambios</button>
-        <button class="btn btn-ghost" onclick="closeModal('modal-editar-usuario')">Cancelar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- TOASTS -->
 <div class="toast-container" id="toast-container"></div>
 
@@ -1955,7 +1924,7 @@ function initDefaults() {
       localidades: ['San Justo','Ramos Mejía','Lomas del Mirador','La Tablada','Villa Madero','Ciudad Celina','Aldo Bonzi','Tapiales','Ciudad Evita','Villa Luzuriaga','Isidro Casanova','Rafael Castillo','Gregorio de Laferrere','González Catán','Virrey del Pino','20 de Junio'],
       tiposEscuela: ['Escuela Primaria','Escuela Secundaria','Escuela Técnica','Jardín de Infantes','Instituto de Formación Docente','FINES','Centro de Formación Profesional','Centro de Formación Laboral','CENS','Otro'],
       cargos: ['Director/a','Vice Director/a','Secretario/a','Docente','Auxiliar administrativo','Preceptor/a','Jefe de preceptores','Coordinador/a pedagógico','Portero/a','Otro'],
-      sheetsUrl: 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec',
+      sheetsUrl: 'https://script.google.com/macros/s/AKfycbwcT_YM6pli_3wBYlckcpaYRD5jJmoD7cbtBECd3jJXI2J5hAeKwUJs1qOZGJ23kqx-MA/exec',
       sheetNameReg: 'Registros',
       sheetNameCheck: 'Presentes',
       checkinItem: 'Tablet',
@@ -1964,8 +1933,10 @@ function initDefaults() {
   } else {
     // Ensure existing configs have the URL and new fields
     const cfg = DB.get('config');
-    if (!cfg.sheetsUrl) {
-      cfg.sheetsUrl = 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec';
+    const OLD_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec';
+    const CURRENT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwcT_YM6pli_3wBYlckcpaYRD5jJmoD7cbtBECd3jJXI2J5hAeKwUJs1qOZGJ23kqx-MA/exec';
+    if (!cfg.sheetsUrl || cfg.sheetsUrl === OLD_SHEETS_URL) {
+      cfg.sheetsUrl = CURRENT_SHEETS_URL;
     }
     if (!cfg.checkinItem) cfg.checkinItem = 'Tablet';
     if (!cfg.customFields) cfg.customFields = [];
@@ -2062,7 +2033,7 @@ function showPage(name) {
 
   if(name==='registros') renderRegistros();
   if(name==='checklist') renderChecklist();
-  if(name==='checkin') renderCheckin();
+  if(name==='checkin') { renderCheckin(); cargarCheckinDesdeNube(true); }
   if(name==='usuarios') renderUsuarios();
   if(name==='config') loadConfigForm();
   if(name==='sincronizar') renderSyncPage();
@@ -2709,7 +2680,7 @@ async function trySync(regs) {
 
 async function trySyncCheckin(items) {
   const cfg = DB.get('config');
-  if(!cfg.sheetsUrl) return;
+  if(!cfg.sheetsUrl || !navigator.onLine) return;
   try {
     for(const item of items) {
       await fetch(cfg.sheetsUrl, {
@@ -2718,7 +2689,14 @@ async function trySyncCheckin(items) {
         headers: { 'Content-Type': 'application/json' },
         mode: 'no-cors',
       });
+      item.synced = true;
     }
+    const checkin = DB.get('checkin', {});
+    items.forEach(item => {
+      const key = item.escuela + '_' + item.nro;
+      if(checkin[key]) checkin[key].synced = true;
+    });
+    DB.set('checkin', checkin);
   } catch{}
 }
 
@@ -2735,6 +2713,66 @@ async function syncCheckinNow() {
   toast('🔄 Sincronizando '+items.length+' establecimientos...','');
   await trySyncCheckin(items);
   toast('✅ Control de Presentes sincronizado','success');
+}
+
+function parseFechaSheet(str) {
+  // Formato: dd/MM/yyyy HH:mm:ss
+  if(!str) return null;
+  const m = String(str).match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):?(\d{2})?/);
+  if(!m) return null;
+  return new Date(m[3], m[2]-1, m[1], m[4], m[5], m[6]||0).toISOString();
+}
+
+async function cargarCheckinDesdeNube(silent) {
+  const cfg = DB.get('config');
+  if(!cfg.sheetsUrl) {
+    if(!silent) { toast('⚠️ Configurá primero la URL de Google Sheets','warning'); showPage('config'); }
+    return;
+  }
+  if(!silent) toast('☁️ Trayendo datos de la nube...','');
+  try {
+    const sheetName = cfg.sheetNameCheck || 'Presentes';
+    const res = await fetch(cfg.sheetsUrl + '?action=list&sheet=' + encodeURIComponent(sheetName));
+    const json = await res.json();
+    if(!json.success) { if(!silent) toast('❌ Error al traer datos: '+(json.error||''),'error'); return; }
+    
+    const local = DB.get('checkin', {});
+    let nuevos = 0, actualizados = 0;
+    
+    json.rows.forEach(row => {
+      const escuela = row['Establecimiento'] || '';
+      const nro = String(row['Nro'] || '');
+      if(!escuela) return;
+      const key = escuela + '_' + nro;
+      const estado = row['Estado'] || '';
+      const remoto = {
+        escuela,
+        nro,
+        categoria: row['Categoría'] || '',
+        presente: estado === 'Presente',
+        fecha: parseFechaSheet(row['Fecha']),
+        operador: row['Compañero'] || null,
+      };
+      
+      if(!local[key]) {
+        local[key] = remoto;
+        nuevos++;
+      } else {
+        const fechaLocal = local[key].fecha ? new Date(local[key].fecha).getTime() : 0;
+        const fechaRemota = remoto.fecha ? new Date(remoto.fecha).getTime() : 0;
+        if(fechaRemota > fechaLocal) {
+          local[key] = remoto;
+          actualizados++;
+        }
+      }
+    });
+    
+    DB.set('checkin', local);
+    renderCheckin();
+    if(!silent) toast(`✅ Sincronizado: ${nuevos} nuevos, ${actualizados} actualizados`, 'success');
+  } catch(e) {
+    if(!silent) toast('❌ No se pudo conectar con Google Sheets','error');
+  }
 }
 
 async function testSheets() {
@@ -2828,6 +2866,9 @@ function startOnlineCheck() {
       // Try to sync pending
       const regs = DB.get('registros',[]).filter(r=>!r.synced);
       if(regs.length) trySync(regs);
+      const checkin = DB.get('checkin', {});
+      const pendingCheckin = Object.values(checkin).filter(c=>!c.synced);
+      if(pendingCheckin.length) trySyncCheckin(pendingCheckin);
     } else {
       bar.className = 'status-bar offline';
       txt.textContent = 'Sin conexión · Los datos se guardan localmente';
@@ -3282,7 +3323,7 @@ function agregarCheckin() {
   const checkin = DB.get('checkin', {});
   const key = esc + '_' + nro;
   if(checkin[key]) { toast('⚠️ Ese establecimiento ya está en la lista','warning'); return; }
-  checkin[key] = { escuela: esc, nro, categoria, presente: false, fecha: null, operador: null };
+  checkin[key] = { escuela: esc, nro, categoria, presente: false, fecha: null, operador: null, synced: false };
   DB.set('checkin', checkin);
   document.getElementById('ci-escuela').value = '';
   document.getElementById('ci-nro').value = '';
@@ -3301,7 +3342,7 @@ function importarDeRegistros() {
     const escNombre = r.tipoEscuela || r.escuela || '';
     const key = escNombre + '_' + r.nroEscuela;
     if(!checkin[key]) {
-      checkin[key] = { escuela: escNombre, nro: r.nroEscuela, categoria: '', presente: false, fecha: null, operador: null };
+      checkin[key] = { escuela: escNombre, nro: r.nroEscuela, categoria: '', presente: false, fecha: null, operador: null, synced: false };
       nuevosItems.push(checkin[key]);
       nuevos++;
     }
@@ -3318,6 +3359,7 @@ function marcarPresente(key) {
   checkin[key].presente = true;
   checkin[key].fecha = new Date().toISOString();
   checkin[key].operador = currentUser.username;
+  checkin[key].synced = false;
   DB.set('checkin', checkin);
   renderCheckin();
   toast(`✅ ${checkin[key].escuela} — Presente`, 'success');
@@ -3330,6 +3372,7 @@ function marcarAusente(key) {
   checkin[key].presente = false;
   checkin[key].fecha = new Date().toISOString();
   checkin[key].operador = currentUser.username;
+  checkin[key].synced = false;
   DB.set('checkin', checkin);
   renderCheckin();
   toast(`↩️ ${checkin[key].escuela} — marcado como ausente`, 'warning');
