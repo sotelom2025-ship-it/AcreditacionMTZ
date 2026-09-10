@@ -1110,11 +1110,11 @@
             <div class="stats-grid" id="stats-grid">
               <div class="stat-card">
                 <div class="stat-icon blue">🏫</div>
-                <div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Registros</div></div>
+                <div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Registros (total)</div></div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon cyan">✅</div>
-                <div><div class="stat-value" id="stat-check">0</div><div class="stat-label">Entregas</div></div>
+                <div class="stat-icon cyan">📅</div>
+                <div><div class="stat-value" id="stat-today">0</div><div class="stat-label">Hoy</div></div>
               </div>
               <div class="stat-card">
                 <div class="stat-icon orange">⏳</div>
@@ -1347,8 +1347,8 @@
                 <input type="text" id="cfg-sheet-name-reg" placeholder="Registros">
               </div>
               <div class="form-group">
-                <label>Nombre de la hoja - Checklist</label>
-                <input type="text" id="cfg-sheet-name-check" placeholder="Checklist">
+                <label>Nombre de la hoja - Presentes (Control de Presentes)</label>
+                <input type="text" id="cfg-sheet-name-check" placeholder="Presentes">
               </div>
             </div>
             <div class="form-actions">
@@ -1523,6 +1523,7 @@
             <span>Registrá la presencia por establecimiento</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-orange btn-sm" onclick="syncCheckinNow()">🔄 Sincronizar</button>
             <button class="btn btn-cyan btn-sm" onclick="exportCheckin()">📤 Exportar</button>
           </div>
         </div>
@@ -1956,7 +1957,7 @@ function initDefaults() {
       cargos: ['Director/a','Vice Director/a','Secretario/a','Docente','Auxiliar administrativo','Preceptor/a','Jefe de preceptores','Coordinador/a pedagógico','Portero/a','Otro'],
       sheetsUrl: 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec',
       sheetNameReg: 'Registros',
-      sheetNameCheck: 'Checklist',
+      sheetNameCheck: 'Presentes',
       checkinItem: 'Tablet',
       customFields: [],
     });
@@ -2193,7 +2194,7 @@ function loadConfigForm() {
   document.getElementById('cfg-cargos').value = cfg.cargos.join('\n');
   document.getElementById('cfg-sheets-url').value = cfg.sheetsUrl || '';
   document.getElementById('cfg-sheet-name-reg').value = cfg.sheetNameReg || 'Registros';
-  document.getElementById('cfg-sheet-name-check').value = cfg.sheetNameCheck || 'Checklist';
+  document.getElementById('cfg-sheet-name-check').value = cfg.sheetNameCheck || 'Presentes';
   renderUsuariosConfig();
   renderCustomFieldsConfig();
 }
@@ -2706,6 +2707,36 @@ async function trySync(regs) {
   } catch{}
 }
 
+async function trySyncCheckin(items) {
+  const cfg = DB.get('config');
+  if(!cfg.sheetsUrl) return;
+  try {
+    for(const item of items) {
+      await fetch(cfg.sheetsUrl, {
+        method: 'POST',
+        body: JSON.stringify({ type:'checkin', data: item, sheet: cfg.sheetNameCheck || 'Presentes' }),
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+      });
+    }
+  } catch{}
+}
+
+async function syncCheckinNow() {
+  const cfg = DB.get('config');
+  if(!cfg.sheetsUrl) {
+    toast('⚠️ Configurá primero la URL de Google Sheets','warning');
+    showPage('config');
+    return;
+  }
+  const checkin = DB.get('checkin', {});
+  const items = Object.values(checkin);
+  if(!items.length) { toast('ℹ️ No hay establecimientos para sincronizar','warning'); return; }
+  toast('🔄 Sincronizando '+items.length+' establecimientos...','');
+  await trySyncCheckin(items);
+  toast('✅ Control de Presentes sincronizado','success');
+}
+
 async function testSheets() {
   const url = document.getElementById('cfg-sheets-url').value.trim();
   if(!url) { toast('⚠️ Ingresá una URL','warning'); return; }
@@ -2765,12 +2796,13 @@ function exportChecklist() {
 // ============================================================
 function updateStats() {
   const regs = DB.get('registros', []);
-  const checks = DB.get('checklist', {});
   const pending = regs.filter(r=>!r.synced).length;
-  const checkDone = Object.values(checks).filter(c=>c.checked).length;
+  const now = new Date();
+  const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const todayCount = regs.filter(r => isSameDay(r.fecha, today)).length;
 
   const st = document.getElementById('stat-total'); if(st) st.textContent = regs.length;
-  const sc = document.getElementById('stat-check'); if(sc) sc.textContent = checkDone;
+  const sc = document.getElementById('stat-today'); if(sc) sc.textContent = todayCount;
   const sp = document.getElementById('stat-pending'); if(sp) sp.textContent = pending;
   const sCount = document.getElementById('sidebar-count'); if(sCount) sCount.textContent = regs.length;
   
@@ -3257,23 +3289,27 @@ function agregarCheckin() {
   document.getElementById('ci-categoria').value = '';
   renderCheckin();
   toast('✅ Establecimiento agregado','success');
+  trySyncCheckin([checkin[key]]);
 }
 
 function importarDeRegistros() {
   const regs = DB.get('registros', []);
   const checkin = DB.get('checkin', {});
   let nuevos = 0;
+  const nuevosItems = [];
   regs.forEach(r => {
     const escNombre = r.tipoEscuela || r.escuela || '';
     const key = escNombre + '_' + r.nroEscuela;
     if(!checkin[key]) {
       checkin[key] = { escuela: escNombre, nro: r.nroEscuela, categoria: '', presente: false, fecha: null, operador: null };
+      nuevosItems.push(checkin[key]);
       nuevos++;
     }
   });
   DB.set('checkin', checkin);
   renderCheckin();
   toast(nuevos > 0 ? `✅ ${nuevos} establecimientos importados` : 'ℹ️ No hay establecimientos nuevos para importar', nuevos>0?'success':'warning');
+  if(nuevosItems.length) trySyncCheckin(nuevosItems);
 }
 
 function marcarPresente(key) {
@@ -3285,6 +3321,7 @@ function marcarPresente(key) {
   DB.set('checkin', checkin);
   renderCheckin();
   toast(`✅ ${checkin[key].escuela} — Presente`, 'success');
+  trySyncCheckin([checkin[key]]);
 }
 
 function marcarAusente(key) {
@@ -3296,6 +3333,7 @@ function marcarAusente(key) {
   DB.set('checkin', checkin);
   renderCheckin();
   toast(`↩️ ${checkin[key].escuela} — marcado como ausente`, 'warning');
+  trySyncCheckin([checkin[key]]);
 }
 
 function eliminarCheckin(key) {
