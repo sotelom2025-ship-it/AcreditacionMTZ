@@ -3256,8 +3256,9 @@ function importarDeRegistros() {
 }
 
 function marcarPresente(key) {
+  if(!currentUser) { toast('⚠️ Tu sesión expiró, volvé a entrar','error'); doLogout(); return; }
   const checkin = DB.get('checkin', {});
-  if(!checkin[key]) return;
+  if(!checkin[key]) { toast('⚠️ No se encontró el establecimiento, actualizá la página','warning'); console.error('MTZ marcarPresente: key no encontrada', key); return; }
   checkin[key].presente = true;
   checkin[key].fecha = new Date().toISOString();
   checkin[key].operador = currentUser.username;
@@ -3269,8 +3270,9 @@ function marcarPresente(key) {
 }
 
 function marcarAusente(key) {
+  if(!currentUser) { toast('⚠️ Tu sesión expiró, volvé a entrar','error'); doLogout(); return; }
   const checkin = DB.get('checkin', {});
-  if(!checkin[key]) return;
+  if(!checkin[key]) { toast('⚠️ No se encontró el establecimiento, actualizá la página','warning'); console.error('MTZ marcarAusente: key no encontrada', key); return; }
   checkin[key].presente = false;
   checkin[key].fecha = new Date().toISOString();
   checkin[key].operador = currentUser.username;
@@ -3296,6 +3298,15 @@ function filterCheckinBy(estado) {
 
 function filterCheckin() {
   renderCheckin();
+}
+
+function escKey(str) {
+  let s = String(str);
+  s = s.replace(/&/g, '&amp;');
+  s = s.replace(/"/g, '&quot;');
+  s = s.replace(/\\/g, '\\\\');
+  s = s.replace(/'/g, "\\'");
+  return s;
 }
 
 function renderCheckin() {
@@ -3341,7 +3352,7 @@ function renderCheckin() {
     else { estadoLabel = '❌ Ausente'; estadoColor = '#c2410c'; }
     return `
     <div class="ci-card ${c.presente ? 'verde' : 'pendiente'}">
-      <button class="ci-delete" onclick="eliminarCheckin('${k}')" title="Eliminar">✕</button>
+      <button class="ci-delete" onclick="eliminarCheckin('${escKey(k)}')" title="Eliminar">✕</button>
       <div class="ci-card-header">
         <div>
           <div class="ci-escuela">${c.escuela}</div>
@@ -3355,8 +3366,8 @@ function renderCheckin() {
       </div>
       <div class="ci-controls">
         ${c.presente 
-          ? `<button class="btn btn-ghost btn-sm" onclick="marcarAusente('${k}')">↩️ Marcar ausente</button>`
-          : `<button class="btn btn-sm" style="background:#16a34a;color:white;padding:7px 12px;" onclick="marcarPresente('${k}')">✔ Marcar presente</button>`
+          ? `<button class="btn btn-ghost btn-sm" onclick="marcarAusente('${escKey(k)}')">↩️ Marcar ausente</button>`
+          : `<button class="btn btn-sm" style="background:#16a34a;color:white;padding:7px 12px;" onclick="marcarPresente('${escKey(k)}')">✔ Marcar presente</button>`
         }
       </div>
       ${fechaStr?`<div class="ci-log"><div>👤 Marcado por <strong>${c.operador||'—'}</strong><br>${fechaStr}</div></div>`:''}
