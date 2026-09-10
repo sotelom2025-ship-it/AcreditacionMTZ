@@ -1172,6 +1172,7 @@
             <span>Todos los datos ingresados al sistema</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" onclick="cargarRegistrosDesdeNube()">☁️ Traer de la nube</button>
             <button class="btn btn-cyan btn-sm" onclick="exportCSV()">📊 Exportar CSV</button>
             <button class="btn btn-orange btn-sm" onclick="syncNow()">🔄 Sincronizar Sheets</button>
           </div>
@@ -1974,7 +1975,8 @@ function showPage(name) {
   const mnavEl = document.getElementById('mnav-'+name);
   if(mnavEl) mnavEl.classList.add('active');
 
-  if(name==='registros') renderRegistros();
+  if(name==='registro') cargarRegistrosDesdeNube(true);
+  if(name==='registros') { renderRegistros(); cargarRegistrosDesdeNube(true); }
   if(name==='checkin') { renderCheckin(); cargarCheckinDesdeNube(true); }
   if(name==='usuarios') renderUsuarios();
   if(name==='config') loadConfigForm();
@@ -2622,6 +2624,99 @@ function parseFechaSheet(str) {
   const d = new Date(s);
   if(!isNaN(d.getTime())) return d.toISOString();
   return null;
+}
+
+function parseFechaHoraSheet(fechaStr, horaStr) {
+  // Fecha viene como dd/mm/yyyy y Hora como HH:mm:ss (columnas separadas en Registros)
+  if(!fechaStr) return null;
+  const fm = String(fechaStr).trim().match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(!fm) return parseFechaSheet(fechaStr + ' ' + (horaStr||''));
+  let hh=0, mm=0, ss=0;
+  if(horaStr) {
+    const hm = String(horaStr).trim().match(/(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+    if(hm) { hh=+hm[1]; mm=+hm[2]; ss=+(hm[3]||0); }
+  }
+  return new Date(+fm[3], +fm[2]-1, +fm[1], hh, mm, ss).toISOString();
+}
+
+async function cargarRegistrosDesdeNube(silent) {
+  const cfg = DB.get('config');
+  if(!cfg.sheetsUrl) {
+    if(!silent) { toast('⚠️ Configurá primero la URL de Google Sheets','warning'); showPage('config'); }
+    return;
+  }
+  if(!silent) toast('☁️ Trayendo registros de la nube...','');
+  const sheetName = cfg.sheetNameReg || 'Registros';
+  const url = cfg.sheetsUrl + '?action=list&sheet=' + encodeURIComponent(sheetName);
+  try {
+    const res = await fetch(url);
+    if(!res.ok) {
+      console.error('MTZ cargarRegistrosDesdeNube: HTTP', res.status);
+      if(!silent) toast(`❌ El servidor respondió con error ${res.status}`,'error');
+      return;
+    }
+    let json;
+    try { json = await res.json(); }
+    catch(parseErr) {
+      if(!silent) toast('❌ El script no devolvió datos válidos. ¿Está actualizado y reimplementado?','error');
+      return;
+    }
+    if(!json.success || !Array.isArray(json.rows)) {
+      if(!silent) toast('❌ El script instalado es una versión vieja. Actualizá el .gs y creá una NUEVA implementación.','error');
+      return;
+    }
+    
+    const local = DB.get('registros', []);
+    const localIds = new Set(local.map(r => r.id));
+    // También armamos un set de "huella" (DNI+tipo+nro+fecha) para detectar duplicados sin ID confiable
+    const localFingerprints = new Set(local.map(r => (r.dni||'')+'|'+(r.tipoEscuela||'')+'|'+(r.nroEscuela||'')+'|'+(r.fecha||'')));
+    
+    let nuevos = 0;
+    json.rows.forEach(row => {
+      const dni = String(row['DNI'] || '').trim();
+      if(!dni) return;
+      const id = String(row['ID'] || '').trim();
+      const fecha = parseFechaHoraSheet(row['Fecha'], row['Hora']) || new Date().toISOString();
+      const tipoEscuela = row['Tipo de Escuela'] || '';
+      const nroEscuela = String(row['Nro Establecimiento'] || '');
+      const fingerprint = dni+'|'+tipoEscuela+'|'+nroEscuela+'|'+fecha;
+      
+      if(id && localIds.has(id)) return; // ya lo tenemos por ID
+      if(!id && localFingerprints.has(fingerprint)) return; // ya lo tenemos (mismo dni+escuela+fecha)
+      
+      const nuevoRegistro = {
+        id: id || (Date.now().toString() + '_' + nuevos),
+        tipoEscuela,
+        nroEscuela,
+        dni,
+        nombre: row['Nombre'] || '',
+        apellido: row['Apellido'] || '',
+        telefono: String(row['Teléfono'] || ''),
+        correo: row['Correo'] || '',
+        cargo: row['Cargo'] || '',
+        custom: {},
+        fecha,
+        operador: row['Compañero'] || row['Operador'] || 'importado',
+        synced: true,
+      };
+      local.push(nuevoRegistro);
+      if(id) localIds.add(id);
+      localFingerprints.add(fingerprint);
+      nuevos++;
+    });
+    
+    if(nuevos > 0) {
+      DB.set('registros', local);
+      updateStats();
+      if(typeof renderRegistros === 'function' && document.getElementById('page-registros') && !document.getElementById('page-registros').classList.contains('hidden')) {
+        renderRegistros();
+      }
+    }
+    if(!silent) toast(`✅ ${nuevos} registro(s) traídos de la nube (${json.rows.length} en total)`, 'success');
+  } catch(e) {
+    console.error('MTZ cargarRegistrosDesdeNube: fetch falló', e);
+    if(!silent) toast('❌ No se pudo conectar con Google Sheets','error');
+  }
 }
 
 async function cargarCheckinDesdeNube(silent) {
