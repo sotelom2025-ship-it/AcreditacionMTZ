@@ -1002,7 +1002,7 @@
     <div class="login-title">Sistema de Recepción</div>
     <div class="login-desc">Ingresá con tus credenciales para continuar</div>
     <div class="role-tabs">
-      <button class="role-tab active" onclick="setRole('operator')">👤 Operador</button>
+      <button class="role-tab active" onclick="setRole('operator')">👤 Compañero</button>
       <button class="role-tab" onclick="setRole('admin')">🔑 Administrador</button>
     </div>
     <div id="login-error" class="login-error"></div>
@@ -1012,7 +1012,10 @@
     </div>
     <div class="form-group">
       <label>Contraseña</label>
-      <input type="password" id="login-pass" placeholder="••••••••" onkeypress="if(event.key==='Enter')doLogin()">
+      <div style="position:relative;">
+        <input type="password" id="login-pass" placeholder="••••••••" style="width:100%;padding-right:44px;" onkeypress="if(event.key==='Enter')doLogin()">
+        <button type="button" onclick="togglePasswordVisibility()" id="toggle-pass-btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px;line-height:1;" title="Mostrar/ocultar contraseña">👁️</button>
+      </div>
     </div>
     <button class="btn btn-primary" onclick="doLogin()">Ingresar →</button>
   </div>
@@ -1034,7 +1037,7 @@
     <div class="header-right">
       <div class="user-badge">
         <div class="user-dot"></div>
-        <span class="name-text" id="header-username">Operador</span>
+        <span class="name-text" id="header-username">Compañero</span>
       </div>
       <button class="btn-logout" onclick="doLogout()">Salir</button>
     </div>
@@ -1057,7 +1060,7 @@
           <span class="nav-icon">📋</span> Nuevo Registro
         </button>
         <button class="nav-item" onclick="showPage('checkin')" id="nav-checkin">
-          <span class="nav-icon">📦</span> <span id="nav-checkin-label">Check-in Tablets</span>
+          <span class="nav-icon">📋</span> <span id="nav-checkin-label">Control de Presentes</span>
         </button>
         <button class="nav-item" onclick="showPage('conexion')" id="nav-conexion">
           <span class="nav-icon">🔗</span> Conexión
@@ -1065,6 +1068,9 @@
       </div>
       <div class="sidebar-section admin-only">
         <div class="sidebar-label">Administración</div>
+        <button class="nav-item" onclick="showPage('envivo')" id="nav-envivo">
+          <span class="nav-icon">🔴</span> En Vivo
+        </button>
         <button class="nav-item" onclick="showPage('resumen')" id="nav-resumen">
           <span class="nav-icon">📊</span> Resumen del Día
         </button>
@@ -1124,7 +1130,7 @@
             <!-- DATOS ESCUELA -->
             <div class="form-section">
               <div class="form-section-title">🏫 Datos del Establecimiento</div>
-              <div class="form-grid">
+              <div class="form-grid" id="grid-establecimiento">
                 <div class="form-group">
                   <label>Tipo de escuela *</label>
                   <select id="f-tipo-escuela" onchange="toggleOtroEscuela()">
@@ -1139,23 +1145,18 @@
                   <label>Número de establecimiento *</label>
                   <input type="text" id="f-nro-escuela" placeholder="ej: 42">
                 </div>
-                <div class="form-group">
-                  <label>Dirección *</label>
-                  <input type="text" id="f-direccion" placeholder="Calle y número">
-                </div>
-                <div class="form-group">
-                  <label>Localidad *</label>
-                  <select id="f-localidad-escuela">
-                    <option value="">Seleccioná localidad...</option>
-                  </select>
-                </div>
               </div>
             </div>
 
             <!-- DATOS PERSONALES -->
             <div class="form-section">
               <div class="form-section-title">👤 Datos Personales</div>
-              <div class="form-grid">
+              <div class="form-grid" id="grid-personales">
+                <div class="form-group full">
+                  <label>DNI *</label>
+                  <input type="text" id="f-dni" placeholder="Ingresá el DNI para buscar si ya existe" oninput="autocompletarPorDNI()" style="font-size:16px;font-weight:600;">
+                  <small id="dni-hint" style="display:none;color:var(--cyan);font-weight:700;margin-top:6px;font-size:13px;animation:fadeIn 0.3s;">✓ Persona encontrada - datos autocompletados</small>
+                </div>
                 <div class="form-group">
                   <label>Nombre *</label>
                   <input type="text" id="f-nombre" placeholder="Nombre">
@@ -1169,33 +1170,18 @@
                   <input type="tel" id="f-telefono" placeholder="ej: 011-1234-5678">
                 </div>
                 <div class="form-group">
-                  <label>DNI *</label>
-                  <input type="text" id="f-dni" placeholder="ej: 30.123.456" oninput="autocompletarPorDNI()">
-                  <small id="dni-hint" style="display:none;color:var(--cyan);font-weight:600;margin-top:4px;font-size:12px;">✓ Persona encontrada - datos autocompletados</small>
-                </div>
-                <div class="form-group">
-                  <label>Localidad de residencia</label>
-                  <select id="f-localidad-persona">
-                    <option value="">Seleccioná localidad...</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Calle</label>
-                  <input type="text" id="f-calle" placeholder="Nombre de la calle">
-                </div>
-                <div class="form-group">
-                  <label>Número</label>
-                  <input type="text" id="f-calle-nro" placeholder="ej: 1234">
-                </div>
-                <div class="form-group">
                   <label>Correo electrónico</label>
                   <input type="email" id="f-correo" placeholder="email@ejemplo.com">
                 </div>
-                <div class="form-group full">
+                <div class="form-group">
                   <label>Cargo en la institución *</label>
-                  <select id="f-cargo">
+                  <select id="f-cargo" onchange="toggleOtroCargo()">
                     <option value="">Seleccioná cargo...</option>
                   </select>
+                </div>
+                <div class="form-group hidden" id="f-otro-cargo-group">
+                  <label>Especificar cargo *</label>
+                  <input type="text" id="f-otro-cargo" placeholder="¿Cuál?">
                 </div>
               </div>
             </div>
@@ -1289,27 +1275,63 @@
         </div>
         <div class="config-grid">
           <div class="config-card">
-            <div class="config-card-title">📍 Localidades</div>
-            <div class="form-group">
-              <label>Lista de localidades (una por línea)</label>
-              <textarea id="cfg-localidades" rows="8" style="font-size:13px;"></textarea>
-            </div>
-          </div>
-          <div class="config-card">
             <div class="config-card-title">💼 Cargos</div>
             <div class="form-group">
               <label>Lista de cargos (uno por línea)</label>
               <textarea id="cfg-cargos" rows="8" style="font-size:13px;"></textarea>
             </div>
           </div>
-          <div class="config-card">
-            <div class="config-card-title">📦 Check-in de Elementos</div>
-            <div class="form-group">
-              <label>Nombre del elemento a entregar</label>
-              <input type="text" id="cfg-checkin-item" placeholder="ej: Tablet, Notebook, Kit...">
+
+          <!-- CAMPOS PERSONALIZADOS -->
+          <div class="config-card" style="grid-column:1/-1">
+            <div class="config-card-title">🧩 Campos personalizados del formulario</div>
+            <p style="font-size:12px;color:var(--text-light);margin-bottom:14px">Agregá o quitá campos extra en "Datos del Establecimiento" o "Datos Personales" (ej: Dirección, DNI del acompañante, etc).</p>
+            <div class="table-wrapper" style="margin-bottom:16px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Etiqueta</th>
+                    <th>Sección</th>
+                    <th>Tipo</th>
+                    <th>Obligatorio</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="cfg-customfields-tbody"></tbody>
+              </table>
             </div>
-            <p style="font-size:12px;color:var(--text-light);margin-top:8px">Este nombre aparecerá en el módulo de check-in y en los reportes.</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Nombre del campo</label>
+                <input type="text" id="cf-new-label" placeholder="ej: Dirección">
+              </div>
+              <div class="form-group">
+                <label>Sección</label>
+                <select id="cf-new-section">
+                  <option value="establecimiento">Datos del Establecimiento</option>
+                  <option value="personales">Datos Personales</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tipo de dato</label>
+                <select id="cf-new-type">
+                  <option value="text">Texto</option>
+                  <option value="email">Email</option>
+                  <option value="tel">Teléfono</option>
+                  <option value="number">Número</option>
+                </select>
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;">
+                <label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:600;font-size:13px;">
+                  <input type="checkbox" id="cf-new-required" style="width:auto;"> Obligatorio
+                </label>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary btn-sm" onclick="agregarCampoPersonalizado()">➕ Agregar campo</button>
+            </div>
           </div>
+
           <div class="config-card" style="grid-column:1/-1">
             <div class="config-card-title">🔗 Google Sheets</div>
             <div class="form-grid">
@@ -1334,7 +1356,7 @@
           
           <!-- GESTIÓN DE USUARIOS -->
           <div class="config-card" style="grid-column:1/-1">
-            <div class="config-card-title">👥 Gestión de Operadores</div>
+            <div class="config-card-title">👥 Gestión de Compañeros</div>
             <div style="margin-bottom:16px">
               <button class="btn btn-primary btn-sm" onclick="openModalUsuario()">➕ Agregar operador</button>
             </div>
@@ -1494,8 +1516,8 @@
       <div id="page-checkin" class="hidden">
         <div class="page-header">
           <div class="page-title">
-            <span id="checkin-page-title">Check-in Tablets</span>
-            <span>Registrá la entrega por establecimiento y número</span>
+            <span id="checkin-page-title">Control de Presentes</span>
+            <span>Registrá la presencia por establecimiento</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-cyan btn-sm" onclick="exportCheckin()">📤 Exportar</button>
@@ -1504,20 +1526,16 @@
 
         <div class="stats-grid" style="margin-bottom:20px">
           <div class="stat-card">
+            <div class="stat-icon blue">🏫</div>
+            <div><div class="stat-value" id="ci-stat-total">0</div><div class="stat-label">Total establecimientos</div></div>
+          </div>
+          <div class="stat-card">
             <div class="stat-icon green">✅</div>
-            <div><div class="stat-value" id="ci-stat-verde">0</div><div class="stat-label">Completos</div></div>
+            <div><div class="stat-value" id="ci-stat-presente">0</div><div class="stat-label">Presentes</div></div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon orange">🟠</div>
-            <div><div class="stat-value" id="ci-stat-naranja">0</div><div class="stat-label">2do control</div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background:linear-gradient(135deg,#fefce0,#fef3b5)">🟡</div>
-            <div><div class="stat-value" id="ci-stat-amarillo">0</div><div class="stat-label">1er control</div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon blue">📭</div>
-            <div><div class="stat-value" id="ci-stat-pendiente">0</div><div class="stat-label">Sin control</div></div>
+            <div class="stat-icon orange">❌</div>
+            <div><div class="stat-value" id="ci-stat-ausente">0</div><div class="stat-label">Ausentes</div></div>
           </div>
         </div>
 
@@ -1536,6 +1554,16 @@
                 <label>Nro *</label>
                 <input type="text" id="ci-nro" placeholder="Nro">
               </div>
+              <div class="form-group">
+                <label>Categoría *</label>
+                <select id="ci-categoria">
+                  <option value="">Seleccioná...</option>
+                  <option value="Reorganización">Reorganización</option>
+                  <option value="Creación">Creación</option>
+                  <option value="Cooperadora al día">Cooperadora al día</option>
+                  <option value="Cooperadora vigente">Cooperadora vigente</option>
+                </select>
+              </div>
             </div>
             <div class="form-actions">
               <button class="btn btn-primary btn-sm" onclick="agregarCheckin()">➕ Agregar</button>
@@ -1546,18 +1574,68 @@
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📦 <span id="checkin-card-title">Estado de Tablets</span></div>
+            <div class="card-title">📋 <span id="checkin-card-title">Lista de establecimientos</span></div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input class="search-input" id="ci-search" placeholder="🔍 Buscar..." oninput="filterCheckin()" style="width:200px">
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <span class="chip" style="background:#fef9c3;color:#854d0e;cursor:pointer" onclick="filterCheckinBy('amarillo')">🟡 1er ctrl</span>
-                <span class="chip" style="background:#fed7aa;color:#9a3412;cursor:pointer" onclick="filterCheckinBy('naranja')">🟠 2do ctrl</span>
-                <span class="chip chip-green" style="cursor:pointer" onclick="filterCheckinBy('verde')">🟢 Completo</span>
+                <span class="chip chip-green" style="cursor:pointer" onclick="filterCheckinBy('presente')">✅ Presentes</span>
+                <span class="chip" style="background:#fed7aa;color:#9a3412;cursor:pointer" onclick="filterCheckinBy('ausente')">❌ Ausentes</span>
                 <span class="chip chip-blue" style="cursor:pointer" onclick="filterCheckinBy('')">Todos</span>
               </div>
             </div>
           </div>
           <div class="card-body" id="checkin-container" style="padding:12px"></div>
+        </div>
+      </div>
+
+      <!-- ===== EN VIVO (ADMIN) ===== -->
+      <div id="page-envivo" class="hidden">
+        <div class="page-header">
+          <div class="page-title">
+            🔴 Acreditaciones en Vivo
+            <span>Seguimiento en tiempo real de las acreditaciones</span>
+          </div>
+          <button class="btn btn-cyan btn-sm" onclick="renderEnVivo()">🔄 Actualizar</button>
+        </div>
+
+        <!-- STATS EN TIEMPO REAL -->
+        <div class="stats-grid" style="margin-bottom:24px">
+          <div class="stat-card">
+            <div class="stat-icon blue">📋</div>
+            <div><div class="stat-value" id="ev-total">0</div><div class="stat-label">Total Hoy</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">⏱️</div>
+            <div><div class="stat-value" id="ev-ultima">—</div><div class="stat-label">Última hace</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">👥</div>
+            <div><div class="stat-value" id="ev-operadores">0</div><div class="stat-label">Compañeros activos</div></div>
+          </div>
+        </div>
+
+        <!-- ÚLTIMAS 20 ACREDITACIONES -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📍 Últimas acreditaciones (más recientes primero)</div>
+            <span id="ev-badge" class="chip chip-blue">0 registros hoy</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Tipo Escuela</th>
+                  <th>Nro</th>
+                  <th>Nombre</th>
+                  <th>DNI</th>
+                  <th>Cargo</th>
+                  <th>Compañero</th>
+                </tr>
+              </thead>
+              <tbody id="envivo-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1612,7 +1690,6 @@
                   <th>Cargo</th>
                   <th>Establecimiento</th>
                   <th>Nro</th>
-                  <th>Localidad</th>
                   <th>Hora</th>
                 </tr>
               </thead>
@@ -1621,14 +1698,14 @@
           </div>
         </div>
 
-        <!-- GRÁFICO POR CARGO -->
+        <!-- GRÁFICOS -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
           <div class="card">
             <div class="card-header"><div class="card-title">🏫 Por tipo de escuela</div></div>
             <div class="card-body" id="resumen-escuelas-chart"></div>
           </div>
           <div class="card">
-            <div class="card-header"><div class="card-title">📍 Por localidad</div></div>
+            <div class="card-header"><div class="card-title">💼 Por cargo</div></div>
             <div class="card-body" id="resumen-loc-chart"></div>
           </div>
         </div>
@@ -1675,7 +1752,7 @@
               <div class="card-body" id="anual-cargos-chart"></div>
             </div>
             <div class="card">
-              <div class="card-header"><div class="card-title">📍 Distribución por localidad</div></div>
+              <div class="card-header"><div class="card-title">🏫 Distribución por tipo de escuela</div></div>
               <div class="card-body" id="anual-loc-chart"></div>
             </div>
           </div>
@@ -1692,7 +1769,7 @@
         <span class="nav-icon">📋</span>Registro
       </button>
       <button class="mobile-nav-item" onclick="showPage('checkin')" id="mnav-checkin">
-        <span class="nav-icon">📦</span>Check-in
+        <span class="nav-icon">📋</span>Presentes
       </button>
       <button class="mobile-nav-item" onclick="showPage('conexion')" id="mnav-conexion">
         <span class="nav-icon">🔗</span>Conexión
@@ -1730,7 +1807,7 @@
       <div class="form-group">
         <label>Rol *</label>
         <select id="mu-rol">
-          <option value="operator">Operador</option>
+          <option value="operator">Compañero</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
@@ -1762,7 +1839,7 @@
       <div class="form-group">
         <label>Rol *</label>
         <select id="eu-rol">
-          <option value="operator">Operador</option>
+          <option value="operator">Compañero</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
@@ -1805,7 +1882,7 @@
       <div class="form-group">
         <label>Rol *</label>
         <select id="eu-rol">
-          <option value="operator">Operador</option>
+          <option value="operator">Compañero</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
@@ -1836,7 +1913,7 @@ function initDefaults() {
   if (!DB.get('users')) {
     DB.set('users', [
       { username: 'Torales', password: 'mtz', role: 'admin' },
-      { username: 'operador', password: 'op123', role: 'operator' },
+      { username: 'Compa_1', password: 'op123', role: 'operator' },
     ]);
   } else {
     const users = DB.get('users', []);
@@ -1844,6 +1921,9 @@ function initDefaults() {
     // Rename 'admin' to 'Torales' if still present
     users.forEach(u => {
       if (u.username === 'admin') { u.username = 'Torales'; u.password = 'mtz'; u.role = 'admin'; changed = true; }
+      if (u.username === 'operador') { u.username = 'Compa_1'; changed = true; }
+      // Fix previous buggy username with emoji/space that made login impossible to type
+      if (u.username === 'Compa_1 ✌️') { u.username = 'Compa_1'; changed = true; }
     });
     // Ensure at least one admin exists; if Torales has wrong role, fix it
     const hasAdmin = users.some(u => u.role === 'admin');
@@ -1861,11 +1941,12 @@ function initDefaults() {
     DB.set('config', {
       localidades: ['San Justo','Ramos Mejía','Lomas del Mirador','La Tablada','Villa Madero','Ciudad Celina','Aldo Bonzi','Tapiales','Ciudad Evita','Villa Luzuriaga','Isidro Casanova','Rafael Castillo','Gregorio de Laferrere','González Catán','Virrey del Pino','20 de Junio'],
       tiposEscuela: ['Escuela Primaria','Escuela Secundaria','Escuela Técnica','Jardín de Infantes','Instituto de Formación Docente','FINES','Centro de Formación Profesional','Centro de Formación Laboral','CENS','Otro'],
-      cargos: ['Director/a','Vice Director/a','Secretario/a','Docente','Auxiliar administrativo','Preceptor/a','Jefe de preceptores','Coordinador/a pedagógico','Portero/a'],
+      cargos: ['Director/a','Vice Director/a','Secretario/a','Docente','Auxiliar administrativo','Preceptor/a','Jefe de preceptores','Coordinador/a pedagógico','Portero/a','Otro'],
       sheetsUrl: 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec',
       sheetNameReg: 'Registros',
       sheetNameCheck: 'Checklist',
       checkinItem: 'Tablet',
+      customFields: [],
     });
   } else {
     // Ensure existing configs have the URL and new fields
@@ -1874,8 +1955,12 @@ function initDefaults() {
       cfg.sheetsUrl = 'https://script.google.com/macros/s/AKfycbxRs9_gfjd9oAIo6tNFWfTuL13wLX8Uk0upK4gSkjIL_f1yyh5h0Fy67vJQ3E_sH5tb/exec';
     }
     if (!cfg.checkinItem) cfg.checkinItem = 'Tablet';
+    if (!cfg.customFields) cfg.customFields = [];
     if (!cfg.tiposEscuela) {
       cfg.tiposEscuela = ['Escuela Primaria','Escuela Secundaria','Escuela Técnica','Jardín de Infantes','Instituto de Formación Docente','FINES','Centro de Formación Profesional','Centro de Formación Laboral','CENS','Otro'];
+    }
+    if (!cfg.cargos.includes('Otro')) {
+      cfg.cargos.push('Otro');
     }
     // Update localities to new list
     cfg.localidades = ['San Justo','Ramos Mejía','Lomas del Mirador','La Tablada','Villa Madero','Ciudad Celina','Aldo Bonzi','Tapiales','Ciudad Evita','Villa Luzuriaga','Isidro Casanova','Rafael Castillo','Gregorio de Laferrere','González Catán','Virrey del Pino','20 de Junio'];
@@ -1894,6 +1979,18 @@ let loginRole = 'operator';
 function setRole(r) {
   loginRole = r;
   document.querySelectorAll('.role-tab').forEach((t,i)=>t.classList.toggle('active', (i===0&&r==='operator')||(i===1&&r==='admin')));
+}
+
+function togglePasswordVisibility() {
+  const input = document.getElementById('login-pass');
+  const btn = document.getElementById('toggle-pass-btn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
 }
 
 function doLogin() {
@@ -1952,6 +2049,7 @@ function showPage(name) {
   if(name==='usuarios') renderUsuarios();
   if(name==='config') loadConfigForm();
   if(name==='sincronizar') renderSyncPage();
+  if(name==='envivo') renderEnVivo();
   if(name==='resumen') renderResumen();
   if(name==='conexion') renderConexion();
 }
@@ -1962,9 +2060,81 @@ function showPage(name) {
 function loadConfig() {
   const cfg = DB.get('config');
   fillSelect('f-tipo-escuela', cfg.tiposEscuela);
-  fillSelect('f-localidad-escuela', cfg.localidades);
-  fillSelect('f-localidad-persona', cfg.localidades);
   fillSelect('f-cargo', cfg.cargos);
+  renderDynamicFields();
+}
+
+// ============================================================
+// CAMPOS PERSONALIZADOS
+// ============================================================
+function renderDynamicFields(prefillCustom) {
+  const cfg = DB.get('config');
+  const fields = cfg.customFields || [];
+  ['grid-establecimiento','grid-personales'].forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if(!grid) return;
+    grid.querySelectorAll('.cf-dynamic').forEach(el => el.remove());
+  });
+  fields.forEach(f => {
+    const gridId = f.section === 'personales' ? 'grid-personales' : 'grid-establecimiento';
+    const grid = document.getElementById(gridId);
+    if(!grid) return;
+    const val = (prefillCustom && prefillCustom[f.id]) || '';
+    const div = document.createElement('div');
+    div.className = 'form-group cf-dynamic';
+    div.innerHTML = `<label>${f.label}${f.required?' *':''}</label><input type="${f.type}" id="cf-${f.id}" value="${val}">`;
+    grid.appendChild(div);
+  });
+}
+
+function renderCustomFieldsConfig() {
+  const cfg = DB.get('config');
+  const fields = cfg.customFields || [];
+  const tbody = document.getElementById('cfg-customfields-tbody');
+  if(!tbody) return;
+  const sectionLabel = { establecimiento: 'Establecimiento', personales: 'Personales' };
+  const typeLabel = { text: 'Texto', email: 'Email', tel: 'Teléfono', number: 'Número' };
+  if(!fields.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:16px">No hay campos personalizados todavía</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = fields.map(f => `
+    <tr>
+      <td><strong>${f.label}</strong></td>
+      <td>${sectionLabel[f.section]||f.section}</td>
+      <td>${typeLabel[f.type]||f.type}</td>
+      <td>${f.required ? '✅ Sí' : '—'}</td>
+      <td><button class="btn btn-danger btn-sm btn-icon" onclick="eliminarCampoPersonalizado('${f.id}')" title="Eliminar">🗑️</button></td>
+    </tr>
+  `).join('');
+}
+
+function agregarCampoPersonalizado() {
+  const label = document.getElementById('cf-new-label').value.trim();
+  const section = document.getElementById('cf-new-section').value;
+  const type = document.getElementById('cf-new-type').value;
+  const required = document.getElementById('cf-new-required').checked;
+  if(!label) { toast('⚠️ Ingresá un nombre para el campo','warning'); return; }
+  const cfg = DB.get('config');
+  if(!cfg.customFields) cfg.customFields = [];
+  const id = 'cf_' + Date.now().toString(36);
+  cfg.customFields.push({ id, label, section, type, required });
+  DB.set('config', cfg);
+  document.getElementById('cf-new-label').value = '';
+  document.getElementById('cf-new-required').checked = false;
+  renderCustomFieldsConfig();
+  renderDynamicFields();
+  toast(`✅ Campo "${label}" agregado`, 'success');
+}
+
+function eliminarCampoPersonalizado(id) {
+  if(!confirm('¿Eliminar este campo del formulario? Los datos ya guardados con este campo no se pierden, pero dejará de mostrarse.')) return;
+  const cfg = DB.get('config');
+  cfg.customFields = (cfg.customFields||[]).filter(f => f.id !== id);
+  DB.set('config', cfg);
+  renderCustomFieldsConfig();
+  renderDynamicFields();
+  toast('🗑️ Campo eliminado', 'warning');
 }
 
 function toggleOtroEscuela() {
@@ -1975,6 +2145,17 @@ function toggleOtroEscuela() {
   } else {
     otroGroup.classList.add('hidden');
     document.getElementById('f-otro-escuela').value = '';
+  }
+}
+
+function toggleOtroCargo() {
+  const cargo = document.getElementById('f-cargo').value;
+  const otroGroup = document.getElementById('f-otro-cargo-group');
+  if (cargo === 'Otro') {
+    otroGroup.classList.remove('hidden');
+  } else {
+    otroGroup.classList.add('hidden');
+    document.getElementById('f-otro-cargo').value = '';
   }
 }
 
@@ -1993,13 +2174,12 @@ function fillSelect(id, arr) {
 
 function loadConfigForm() {
   const cfg = DB.get('config');
-  document.getElementById('cfg-localidades').value = cfg.localidades.join('\n');
   document.getElementById('cfg-cargos').value = cfg.cargos.join('\n');
   document.getElementById('cfg-sheets-url').value = cfg.sheetsUrl || '';
   document.getElementById('cfg-sheet-name-reg').value = cfg.sheetNameReg || 'Registros';
   document.getElementById('cfg-sheet-name-check').value = cfg.sheetNameCheck || 'Checklist';
-  document.getElementById('cfg-checkin-item').value = cfg.checkinItem || 'Tablet';
   renderUsuariosConfig();
+  renderCustomFieldsConfig();
 }
 
 function renderUsuariosConfig() {
@@ -2010,7 +2190,7 @@ function renderUsuariosConfig() {
   tbody.innerHTML = users.map((u,i) => `
     <tr>
       <td><strong>${u.username}</strong></td>
-      <td><span class="chip ${u.role==='admin'?'chip-orange':'chip-blue'}">${u.role==='admin'?'🔑 Admin':'👤 Operador'}</span></td>
+      <td><span class="chip ${u.role==='admin'?'chip-orange':'chip-blue'}">${u.role==='admin'?'🔑 Admin':'👤 Compañero'}</span></td>
       <td><div class="td-actions">
         <button class="btn btn-ghost btn-sm btn-icon" onclick="editarUsuario(${i})" title="Editar">✏️</button>
         ${u.username!==currentUser.username?`<button class="btn btn-danger btn-sm btn-icon" onclick="eliminarUsuario(${i})" title="Eliminar">🗑️</button>`:''}
@@ -2021,15 +2201,12 @@ function renderUsuariosConfig() {
 
 function saveConfig() {
   const cfg = DB.get('config');
-  cfg.localidades = document.getElementById('cfg-localidades').value.split('\n').map(s=>s.trim()).filter(Boolean);
   cfg.cargos = document.getElementById('cfg-cargos').value.split('\n').map(s=>s.trim()).filter(Boolean);
   cfg.sheetsUrl = document.getElementById('cfg-sheets-url').value.trim();
   cfg.sheetNameReg = document.getElementById('cfg-sheet-name-reg').value.trim();
   cfg.sheetNameCheck = document.getElementById('cfg-sheet-name-check').value.trim();
-  cfg.checkinItem = document.getElementById('cfg-checkin-item').value.trim() || 'Tablet';
   DB.set('config', cfg);
   loadConfig();
-  updateCheckinLabels();
   toast('✅ Configuración guardada', 'success');
 }
 
@@ -2055,17 +2232,24 @@ function autocompletarPorDNI() {
     document.getElementById('f-nombre').value = found.nombre || '';
     document.getElementById('f-apellido').value = found.apellido || '';
     document.getElementById('f-telefono').value = found.telefono || '';
-    document.getElementById('f-localidad-persona').value = found.localidadPersona || '';
-    document.getElementById('f-calle').value = found.calle || '';
-    document.getElementById('f-calle-nro').value = found.calleNro || '';
     document.getElementById('f-correo').value = found.correo || '';
-    document.getElementById('f-cargo').value = found.cargo || '';
+    
+    const cargoSelect = document.getElementById('f-cargo');
+    const cargoOptions = Array.from(cargoSelect.options).map(o => o.value);
+    if (found.cargo && cargoOptions.includes(found.cargo)) {
+      cargoSelect.value = found.cargo;
+      document.getElementById('f-otro-cargo-group').classList.add('hidden');
+    } else if (found.cargo) {
+      cargoSelect.value = 'Otro';
+      document.getElementById('f-otro-cargo-group').classList.remove('hidden');
+      document.getElementById('f-otro-cargo').value = found.cargo;
+    }
     
     // Show hint
     if (hint) hint.style.display = 'block';
     
-    // Focus on school name field since personal data is filled
-    document.getElementById('f-escuela').focus();
+    // Focus on school type field since personal data is filled
+    document.getElementById('f-tipo-escuela').focus();
   }
 }
 
@@ -2074,21 +2258,28 @@ function getFormData() {
   const otroEscuela = document.getElementById('f-otro-escuela').value.trim();
   const tipoFinal = tipoEscuela === 'Otro' ? otroEscuela : tipoEscuela;
   
+  const cargo = document.getElementById('f-cargo').value;
+  const otroCargo = document.getElementById('f-otro-cargo').value.trim();
+  const cargoFinal = cargo === 'Otro' ? otroCargo : cargo;
+  
+  const cfg = DB.get('config');
+  const custom = {};
+  (cfg.customFields||[]).forEach(f => {
+    const el = document.getElementById('cf-'+f.id);
+    if(el) custom[f.id] = el.value.trim();
+  });
+  
   return {
     id: Date.now().toString(),
     tipoEscuela: tipoFinal,
     nroEscuela: document.getElementById('f-nro-escuela').value.trim(),
-    direccion: document.getElementById('f-direccion').value.trim(),
-    localidadEscuela: document.getElementById('f-localidad-escuela').value,
     nombre: document.getElementById('f-nombre').value.trim(),
     apellido: document.getElementById('f-apellido').value.trim(),
     telefono: document.getElementById('f-telefono').value.trim(),
     dni: document.getElementById('f-dni').value.trim(),
-    localidadPersona: document.getElementById('f-localidad-persona').value,
-    calle: document.getElementById('f-calle').value.trim(),
-    calleNro: document.getElementById('f-calle-nro').value.trim(),
     correo: document.getElementById('f-correo').value.trim(),
-    cargo: document.getElementById('f-cargo').value,
+    cargo: cargoFinal,
+    custom,
     fecha: new Date().toISOString(),
     operador: currentUser.username,
     synced: false,
@@ -2096,9 +2287,15 @@ function getFormData() {
 }
 
 function validateForm(d) {
-  const req = ['tipoEscuela','nroEscuela','direccion','localidadEscuela','nombre','apellido','telefono','dni','cargo'];
+  const req = ['tipoEscuela','nroEscuela','nombre','apellido','telefono','dni','cargo'];
   for(const k of req) {
     if(!d[k]) { toast('⚠️ Completá todos los campos obligatorios (*)','warning'); return false; }
+  }
+  const cfg = DB.get('config');
+  for(const f of (cfg.customFields||[])) {
+    if(f.required && !(d.custom && d.custom[f.id])) {
+      toast(`⚠️ Completá el campo "${f.label}"`,'warning'); return false;
+    }
   }
   return true;
 }
@@ -2109,11 +2306,6 @@ function guardarRegistro() {
   const registros = DB.get('registros', []);
   registros.unshift(data);
   DB.set('registros', registros);
-  // Add to checklist if not already there
-  const checklist = DB.get('checklist', {});
-  const key = data.escuela+'_'+data.nroEscuela;
-  if(!checklist[key]) checklist[key] = { escuela: data.escuela, nro: data.nroEscuela, checked: false, fecha: null };
-  DB.set('checklist', checklist);
   limpiarForm();
   updateStats();
   toast('✅ Registro guardado correctamente', 'success');
@@ -2121,16 +2313,19 @@ function guardarRegistro() {
 }
 
 function limpiarForm() {
-  ['f-nro-escuela','f-direccion','f-nombre','f-apellido','f-telefono','f-dni','f-calle','f-calle-nro','f-correo','f-otro-escuela'].forEach(id=>{
+  ['f-nro-escuela','f-nombre','f-apellido','f-telefono','f-dni','f-correo','f-otro-escuela','f-otro-cargo'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value='';
   });
-  ['f-tipo-escuela','f-localidad-escuela','f-localidad-persona','f-cargo'].forEach(id=>{
+  ['f-tipo-escuela','f-cargo'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value='';
   });
   const otroGroup = document.getElementById('f-otro-escuela-group');
   if(otroGroup) otroGroup.classList.add('hidden');
+  const otroCargoGroup = document.getElementById('f-otro-cargo-group');
+  if(otroCargoGroup) otroCargoGroup.classList.add('hidden');
   const dniHint = document.getElementById('dni-hint');
   if(dniHint) dniHint.style.display='none';
+  document.querySelectorAll('.cf-dynamic input').forEach(el => el.value='');
 }
 
 // ============================================================
@@ -2187,32 +2382,48 @@ function editarRegistro(id) {
   if(!r) return;
   editingId = id;
   const cfg = DB.get('config');
-  const locOpts = cfg.localidades.map(l=>`<option value="${l}" ${l===r.localidadEscuela?'selected':''}>${l}</option>`).join('');
-  const locOpts2 = cfg.localidades.map(l=>`<option value="${l}" ${l===r.localidadPersona?'selected':''}>${l}</option>`).join('');
+  const tipoKnown = cfg.tiposEscuela.includes(r.tipoEscuela);
+  const tipoOpts = cfg.tiposEscuela.map(t=>`<option value="${t}" ${t===r.tipoEscuela?'selected':''}>${t}</option>`).join('');
+  const cargoKnown = cfg.cargos.includes(r.cargo);
   const cargOpts = cfg.cargos.map(c=>`<option value="${c}" ${c===r.cargo?'selected':''}>${c}</option>`).join('');
 
   document.getElementById('modal-editar-body').innerHTML = `
     <div class="form-section">
       <div class="form-section-title">🏫 Datos del Establecimiento</div>
-      <div class="form-grid">
-        <div class="form-group"><label>Establecimiento</label><input type="text" id="e-escuela" value="${r.escuela}"></div>
-        <div class="form-group"><label>Número</label><input type="text" id="e-nro" value="${r.nroEscuela}"></div>
-        <div class="form-group"><label>Dirección</label><input type="text" id="e-dir" value="${r.direccion}"></div>
-        <div class="form-group"><label>Localidad</label><select id="e-loc-esc"><option value="">Seleccioná...</option>${locOpts}</select></div>
+      <div class="form-grid" id="e-grid-establecimiento">
+        <div class="form-group">
+          <label>Tipo de escuela</label>
+          <select id="e-tipo-escuela" onchange="document.getElementById('e-otro-escuela-group').classList.toggle('hidden', this.value!=='Otro')">
+            <option value="">Seleccioná...</option>${tipoOpts}
+            ${!tipoKnown && r.tipoEscuela ? `<option value="Otro" selected>Otro</option>` : ''}
+          </select>
+        </div>
+        <div class="form-group ${tipoKnown ? 'hidden' : ''}" id="e-otro-escuela-group">
+          <label>Especificar tipo</label>
+          <input type="text" id="e-otro-escuela" value="${!tipoKnown ? (r.tipoEscuela||'') : ''}">
+        </div>
+        <div class="form-group"><label>Número</label><input type="text" id="e-nro" value="${r.nroEscuela||''}"></div>
       </div>
     </div>
     <div class="form-section">
       <div class="form-section-title">👤 Datos Personales</div>
-      <div class="form-grid">
-        <div class="form-group"><label>Nombre</label><input type="text" id="e-nombre" value="${r.nombre}"></div>
-        <div class="form-group"><label>Apellido</label><input type="text" id="e-apellido" value="${r.apellido}"></div>
-        <div class="form-group"><label>Teléfono</label><input type="text" id="e-tel" value="${r.telefono}"></div>
-        <div class="form-group"><label>DNI</label><input type="text" id="e-dni" value="${r.dni}"></div>
-        <div class="form-group"><label>Localidad</label><select id="e-loc-per"><option value="">Seleccioná...</option>${locOpts2}</select></div>
-        <div class="form-group"><label>Calle</label><input type="text" id="e-calle" value="${r.calle}"></div>
-        <div class="form-group"><label>Nro</label><input type="text" id="e-callenro" value="${r.calleNro}"></div>
-        <div class="form-group"><label>Correo</label><input type="email" id="e-correo" value="${r.correo}"></div>
-        <div class="form-group full"><label>Cargo</label><select id="e-cargo"><option value="">Seleccioná...</option>${cargOpts}</select></div>
+      <div class="form-grid" id="e-grid-personales">
+        <div class="form-group"><label>DNI</label><input type="text" id="e-dni" value="${r.dni||''}"></div>
+        <div class="form-group"><label>Nombre</label><input type="text" id="e-nombre" value="${r.nombre||''}"></div>
+        <div class="form-group"><label>Apellido</label><input type="text" id="e-apellido" value="${r.apellido||''}"></div>
+        <div class="form-group"><label>Teléfono</label><input type="text" id="e-tel" value="${r.telefono||''}"></div>
+        <div class="form-group"><label>Correo</label><input type="email" id="e-correo" value="${r.correo||''}"></div>
+        <div class="form-group">
+          <label>Cargo</label>
+          <select id="e-cargo" onchange="document.getElementById('e-otro-cargo-group').classList.toggle('hidden', this.value!=='Otro')">
+            <option value="">Seleccioná...</option>${cargOpts}
+            ${!cargoKnown && r.cargo ? `<option value="Otro" selected>Otro</option>` : ''}
+          </select>
+        </div>
+        <div class="form-group ${cargoKnown ? 'hidden' : ''}" id="e-otro-cargo-group">
+          <label>Especificar cargo</label>
+          <input type="text" id="e-otro-cargo" value="${!cargoKnown ? (r.cargo||'') : ''}">
+        </div>
       </div>
     </div>
     <div class="form-actions">
@@ -2220,6 +2431,17 @@ function editarRegistro(id) {
       <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cancelar</button>
     </div>
   `;
+  // Inyectar campos personalizados con sus valores actuales
+  (cfg.customFields||[]).forEach(f => {
+    const gridId = f.section === 'personales' ? 'e-grid-personales' : 'e-grid-establecimiento';
+    const grid = document.getElementById(gridId);
+    if(!grid) return;
+    const val = (r.custom && r.custom[f.id]) || '';
+    const div = document.createElement('div');
+    div.className = 'form-group cf-dynamic';
+    div.innerHTML = `<label>${f.label}${f.required?' *':''}</label><input type="${f.type}" id="e-cf-${f.id}" value="${val}">`;
+    grid.appendChild(div);
+  });
   document.getElementById('modal-editar').classList.add('open');
 }
 
@@ -2227,21 +2449,33 @@ function guardarEdicion() {
   let registros = DB.get('registros', []);
   const idx = registros.findIndex(x=>x.id===editingId);
   if(idx<0) return;
+  
+  const tipoEscuela = document.getElementById('e-tipo-escuela').value;
+  const otroEscuela = document.getElementById('e-otro-escuela').value.trim();
+  const tipoFinal = tipoEscuela === 'Otro' ? otroEscuela : tipoEscuela;
+  
+  const cargo = document.getElementById('e-cargo').value;
+  const otroCargo = document.getElementById('e-otro-cargo').value.trim();
+  const cargoFinal = cargo === 'Otro' ? otroCargo : cargo;
+  
+  const cfg = DB.get('config');
+  const custom = { ...(registros[idx].custom||{}) };
+  (cfg.customFields||[]).forEach(f => {
+    const el = document.getElementById('e-cf-'+f.id);
+    if(el) custom[f.id] = el.value.trim();
+  });
+  
   registros[idx] = {
     ...registros[idx],
-    escuela: document.getElementById('e-escuela').value.trim(),
+    tipoEscuela: tipoFinal,
     nroEscuela: document.getElementById('e-nro').value.trim(),
-    direccion: document.getElementById('e-dir').value.trim(),
-    localidadEscuela: document.getElementById('e-loc-esc').value,
     nombre: document.getElementById('e-nombre').value.trim(),
     apellido: document.getElementById('e-apellido').value.trim(),
     telefono: document.getElementById('e-tel').value.trim(),
     dni: document.getElementById('e-dni').value.trim(),
-    localidadPersona: document.getElementById('e-loc-per').value,
-    calle: document.getElementById('e-calle').value.trim(),
-    calleNro: document.getElementById('e-callenro').value.trim(),
     correo: document.getElementById('e-correo').value.trim(),
-    cargo: document.getElementById('e-cargo').value,
+    cargo: cargoFinal,
+    custom,
     synced: false,
   };
   DB.set('registros', registros);
@@ -2306,7 +2540,7 @@ function renderUsuarios() {
   tbody.innerHTML = users.map((u,i) => `
     <tr>
       <td><strong>${u.username}</strong></td>
-      <td><span class="chip ${u.role==='admin'?'chip-orange':'chip-blue'}">${u.role==='admin'?'🔑 Admin':'👤 Operador'}</span></td>
+      <td><span class="chip ${u.role==='admin'?'chip-orange':'chip-blue'}">${u.role==='admin'?'🔑 Admin':'👤 Compañero'}</span></td>
       <td><span class="chip chip-green">✅ Activo</span></td>
       <td><div class="td-actions">
         <button class="btn btn-ghost btn-sm btn-icon" onclick="editarUsuario(${i})" title="Editar">✏️</button>
@@ -2434,9 +2668,17 @@ async function trySync(regs) {
   if(!cfg.sheetsUrl || !navigator.onLine) return;
   try {
     for(const r of regs) {
+      // Convertir custom (keyed by field id) a labels legibles para la planilla
+      const customLabeled = {};
+      if(r.custom) {
+        (cfg.customFields||[]).forEach(f => {
+          if(r.custom[f.id] !== undefined && r.custom[f.id] !== '') customLabeled[f.label] = r.custom[f.id];
+        });
+      }
+      const payload = { ...r, custom: customLabeled };
       await fetch(cfg.sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ type:'registro', data: r, sheet: cfg.sheetNameReg }),
+        body: JSON.stringify({ type:'registro', data: payload, sheet: cfg.sheetNameReg }),
         headers: { 'Content-Type': 'application/json' },
         mode: 'no-cors',
       });
@@ -2473,8 +2715,14 @@ function logSync(msg) {
 function exportCSV() {
   const regs = DB.get('registros', []);
   if(!regs.length) { toast('⚠️ No hay registros para exportar','warning'); return; }
-  const headers = ['Establecimiento','Nro','Dirección','Localidad Est.','Nombre','Apellido','Teléfono','DNI','Localidad Persona','Calle','Nro Calle','Correo','Cargo','Fecha','Operador','Sincronizado'];
-  const rows = regs.map(r=>[r.escuela,r.nroEscuela,r.direccion,r.localidadEscuela,r.nombre,r.apellido,r.telefono,r.dni,r.localidadPersona,r.calle,r.calleNro,r.correo,r.cargo,new Date(r.fecha).toLocaleString('es-AR'),r.operador,r.synced?'Sí':'No']);
+  const cfg = DB.get('config');
+  const customFields = cfg.customFields || [];
+  const headers = ['Tipo Escuela','Nro','DNI','Nombre','Apellido','Teléfono','Correo','Cargo', ...customFields.map(f=>f.label), 'Fecha','Compañero','Sincronizado'];
+  const rows = regs.map(r=>[
+    r.tipoEscuela,r.nroEscuela,r.dni,r.nombre,r.apellido,r.telefono,r.correo,r.cargo,
+    ...customFields.map(f=>(r.custom && r.custom[f.id]) || ''),
+    new Date(r.fecha).toLocaleString('es-AR'),r.operador,r.synced?'Sí':'No'
+  ]);
   const csv = [headers,...rows].map(r=>r.map(c=>'"'+(c||'')+'"').join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
@@ -2583,6 +2831,83 @@ function isSameDay(isoDate, targetDate) {
   return localStr === targetDate;
 }
 
+// ============================================================
+// EN VIVO
+// ============================================================
+function renderEnVivo() {
+  const now = new Date();
+  const today = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0');
+  
+  const regs = DB.get('registros', []).filter(r => isSameDay(r.fecha, today));
+  
+  // Sort by fecha descending (most recent first)
+  regs.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  
+  // Stats
+  document.getElementById('ev-total').textContent = regs.length;
+  document.getElementById('ev-badge').textContent = regs.length + ' registro' + (regs.length !== 1 ? 's' : '') + ' hoy';
+  
+  // Time since last
+  if (regs.length > 0) {
+    const lastTime = new Date(regs[0].fecha);
+    const diff = Math.floor((now - lastTime) / 1000 / 60); // minutes
+    if (diff < 1) {
+      document.getElementById('ev-ultima').textContent = 'Ahora';
+    } else if (diff < 60) {
+      document.getElementById('ev-ultima').textContent = diff + ' min';
+    } else {
+      const hours = Math.floor(diff / 60);
+      document.getElementById('ev-ultima').textContent = hours + ' h';
+    }
+  } else {
+    document.getElementById('ev-ultima').textContent = '—';
+  }
+  
+  // Active operators (last 30 min)
+  const last30min = now.getTime() - 30 * 60 * 1000;
+  const activeOps = new Set();
+  regs.forEach(r => {
+    if (new Date(r.fecha).getTime() > last30min) {
+      activeOps.add(r.operador);
+    }
+  });
+  document.getElementById('ev-operadores').textContent = activeOps.size;
+  
+  // Table - show last 20
+  const tbody = document.getElementById('envivo-tbody');
+  if (!regs.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><p>No hay acreditaciones todavía hoy</p></div></td></tr>`;
+  } else {
+    const last20 = regs.slice(0, 20);
+    tbody.innerHTML = last20.map(r => {
+      const time = new Date(r.fecha);
+      const mins = Math.floor((now - time) / 1000 / 60);
+      let timeStr = time.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+      let timeClass = '';
+      if (mins < 2) {
+        timeClass = 'style="color:var(--green);font-weight:800"';
+        timeStr += ' 🟢';
+      } else if (mins < 5) {
+        timeClass = 'style="color:var(--cyan);font-weight:700"';
+      }
+      
+      return `
+      <tr>
+        <td ${timeClass}>${timeStr}</td>
+        <td>${r.tipoEscuela || ''}</td>
+        <td>${r.nroEscuela}</td>
+        <td><strong>${r.nombre} ${r.apellido}</strong></td>
+        <td>${r.dni}</td>
+        <td><span class="chip chip-blue" style="font-size:11px">${r.cargo}</span></td>
+        <td><span class="chip chip-cyan" style="font-size:11px">${r.operador}</span></td>
+      </tr>
+      `;
+    }).join('');
+  }
+}
+
 function renderResumen() {
   const picker = document.getElementById('resumen-fecha-picker');
   const now = new Date();
@@ -2609,7 +2934,7 @@ function renderResumen() {
   // Table
   const tbody = document.getElementById('resumen-tbody');
   if(!regs.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><p>Sin registros para esta fecha</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><p>Sin registros para esta fecha</p></div></td></tr>`;
   } else {
     tbody.innerHTML = regs.map((r,i) => `
       <tr>
@@ -2619,15 +2944,14 @@ function renderResumen() {
         <td><span class="chip chip-blue" style="font-size:10px">${r.cargo}</span></td>
         <td>${r.tipoEscuela||''}</td>
         <td>${r.nroEscuela}</td>
-        <td>${r.localidadEscuela}</td>
         <td>${new Date(r.fecha).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
       </tr>
     `).join('');
   }
 
-  // Bar charts - por tipo de escuela y por localidad
+  // Bar charts - por tipo de escuela y por cargo
   renderBarChart('resumen-escuelas-chart', regs, 'tipoEscuela', ['#1a3a6b','#2250a0','#2bbcd4','#e87e2a','#27ae60','#9b59b6','#3498db','#f39c12','#16a085','#d35400']);
-  renderBarChart('resumen-loc-chart', regs, 'localidadEscuela', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c','#9b59b6','#3498db']);
+  renderBarChart('resumen-loc-chart', regs, 'cargo', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c','#9b59b6','#3498db']);
 }
 
 function renderBarChart(containerId, regs, field, colors) {
@@ -2735,7 +3059,7 @@ function renderResumenAnual() {
   
   // Charts por cargo y localidad
   renderBarChart('anual-cargos-chart', regs, 'cargo', ['#1a3a6b','#2250a0','#2bbcd4','#e87e2a','#27ae60','#9b59b6']);
-  renderBarChart('anual-loc-chart', regs, 'localidadEscuela', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c']);
+  renderBarChart('anual-loc-chart', regs, 'tipoEscuela', ['#2bbcd4','#1a9fb8','#1a3a6b','#e87e2a','#27ae60','#e74c3c']);
 }
 
 function exportResumenAnual() {
@@ -2749,10 +3073,10 @@ function exportResumenAnual() {
   
   if (!regs.length) { toast('⚠️ No hay datos para este año', 'warning'); return; }
   
-  const headers = ['Fecha','Establecimiento','Nro','Nombre','Apellido','DNI','Cargo','Localidad','Operador'];
+  const headers = ['Fecha','Tipo Escuela','Nro','Nombre','Apellido','DNI','Cargo','Compañero'];
   const rows = regs.map(r => [
     new Date(r.fecha).toLocaleDateString('es-AR'),
-    r.escuela, r.nroEscuela, r.nombre, r.apellido, r.dni, r.cargo, r.localidadEscuela, r.operador
+    r.tipoEscuela, r.nroEscuela, r.nombre, r.apellido, r.dni, r.cargo, r.operador
   ]);
   const csv = [headers, ...rows].map(r => r.map(c => '"' + (c || '') + '"').join(',')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
@@ -2791,12 +3115,9 @@ function descargarAcreditacion() {
   // Sort by time ascending
   regs.sort(function(a,b){ return new Date(a.fecha) - new Date(b.fecha); });
 
-  var checklist = DB.get('checklist', {});
-  var checksDia = Object.values(checklist).filter(function(c){ return c.checked && c.fecha && c.fecha.indexOf(fecha) === 0; });
-
   var escSet = {}; var carSet = {};
   for (var i = 0; i < regs.length; i++) {
-    escSet[regs[i].escuela+'_'+regs[i].nroEscuela] = 1;
+    escSet[regs[i].tipoEscuela+'_'+regs[i].nroEscuela] = 1;
     if (regs[i].cargo) carSet[regs[i].cargo] = 1;
   }
   var escuelasUnicas = Object.keys(escSet);
@@ -2812,9 +3133,8 @@ function descargarAcreditacion() {
     filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4"><strong>' + (r.apellido||'') + ', ' + (r.nombre||'') + '</strong></td>';
     filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.dni||'') + '</td>';
     filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.cargo||'') + '</td>';
-    filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.escuela||'') + '</td>';
+    filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.tipoEscuela||'') + '</td>';
     filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.nroEscuela||'') + '</td>';
-    filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.localidadEscuela||'') + '</td>';
     filas += '<td style="padding:7px 8px;border-bottom:1px solid #e8eef4">' + (r.telefono||'') + '</td>';
     filas += '<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #e8eef4">' + hora + '</td>';
     filas += '</tr>';
@@ -2830,9 +3150,8 @@ function descargarAcreditacion() {
     tableHtml += '<th style="' + thStyle + '">Apellido y Nombre</th>';
     tableHtml += '<th style="' + thStyle + '">DNI</th>';
     tableHtml += '<th style="' + thStyle + '">Cargo</th>';
-    tableHtml += '<th style="' + thStyle + '">Establecimiento</th>';
+    tableHtml += '<th style="' + thStyle + '">Tipo de Escuela</th>';
     tableHtml += '<th style="' + thStyle + '">Nro</th>';
-    tableHtml += '<th style="' + thStyle + '">Localidad</th>';
     tableHtml += '<th style="' + thStyle + '">Telefono</th>';
     tableHtml += '<th style="' + thStyle + 'text-align:center">Hora</th>';
     tableHtml += '</tr></thead><tbody>' + filas + '</tbody></table>';
@@ -2903,31 +3222,23 @@ function descargarAcreditacion() {
 let checkinFilter = '';
 
 function updateCheckinLabels() {
-  const cfg = DB.get('config');
-  const item = cfg.checkinItem || 'Tablet';
-  const els = [
-    document.getElementById('nav-checkin-label'),
-    document.getElementById('checkin-page-title'),
-    document.getElementById('checkin-card-title'),
-  ];
-  els.forEach(el => { if(el) { 
-    if(el.id==='nav-checkin-label') el.textContent = 'Check-in ' + item + 's';
-    else if(el.id==='checkin-page-title') el.textContent = 'Check-in ' + item + 's';
-    else el.textContent = 'Estado de ' + item + 's';
-  }});
+  // Labels are now static (Control de Presentes) - kept for compatibility
 }
 
 function agregarCheckin() {
   const esc = document.getElementById('ci-escuela').value.trim();
   const nro = document.getElementById('ci-nro').value.trim();
+  const categoria = document.getElementById('ci-categoria').value;
   if(!esc||!nro) { toast('⚠️ Completá establecimiento y número','warning'); return; }
+  if(!categoria) { toast('⚠️ Seleccioná una categoría','warning'); return; }
   const checkin = DB.get('checkin', {});
   const key = esc + '_' + nro;
   if(checkin[key]) { toast('⚠️ Ese establecimiento ya está en la lista','warning'); return; }
-  checkin[key] = { escuela: esc, nro, controles: [], estado: 'pendiente' };
+  checkin[key] = { escuela: esc, nro, categoria, presente: false, fecha: null, operador: null };
   DB.set('checkin', checkin);
   document.getElementById('ci-escuela').value = '';
   document.getElementById('ci-nro').value = '';
+  document.getElementById('ci-categoria').value = '';
   renderCheckin();
   toast('✅ Establecimiento agregado','success');
 }
@@ -2937,9 +3248,10 @@ function importarDeRegistros() {
   const checkin = DB.get('checkin', {});
   let nuevos = 0;
   regs.forEach(r => {
-    const key = r.escuela + '_' + r.nroEscuela;
+    const escNombre = r.tipoEscuela || r.escuela || '';
+    const key = escNombre + '_' + r.nroEscuela;
     if(!checkin[key]) {
-      checkin[key] = { escuela: r.escuela, nro: r.nroEscuela, controles: [], estado: 'pendiente' };
+      checkin[key] = { escuela: escNombre, nro: r.nroEscuela, categoria: '', presente: false, fecha: null, operador: null };
       nuevos++;
     }
   });
@@ -2948,34 +3260,30 @@ function importarDeRegistros() {
   toast(nuevos > 0 ? `✅ ${nuevos} establecimientos importados` : 'ℹ️ No hay establecimientos nuevos para importar', nuevos>0?'success':'warning');
 }
 
-function registrarControl(key) {
+function marcarPresente(key) {
   const checkin = DB.get('checkin', {});
   if(!checkin[key]) return;
-  const item = checkin[key];
-  if(item.controles.length >= 3) { toast('✅ Ya tiene los 3 controles completados','warning'); return; }
-  const cfg = DB.get('config');
-  item.controles.push({ fecha: new Date().toISOString(), operador: currentUser.username, elemento: cfg.checkinItem||'Tablet' });
-  const n = item.controles.length;
-  item.estado = n===1?'amarillo':n===2?'naranja':'verde';
+  checkin[key].presente = true;
+  checkin[key].fecha = new Date().toISOString();
+  checkin[key].operador = currentUser.username;
   DB.set('checkin', checkin);
   renderCheckin();
-  const labels = ['','1er control ✅','2do control ✅','¡Completo! ✅'];
-  toast(`📦 ${item.escuela} — ${labels[n]}`, 'success');
+  toast(`✅ ${checkin[key].escuela} — Presente`, 'success');
 }
 
-function deshacerControl(key) {
+function marcarAusente(key) {
   const checkin = DB.get('checkin', {});
-  if(!checkin[key] || !checkin[key].controles.length) return;
-  checkin[key].controles.pop();
-  const n = checkin[key].controles.length;
-  checkin[key].estado = n===0?'pendiente':n===1?'amarillo':'naranja';
+  if(!checkin[key]) return;
+  checkin[key].presente = false;
+  checkin[key].fecha = new Date().toISOString();
+  checkin[key].operador = currentUser.username;
   DB.set('checkin', checkin);
   renderCheckin();
-  toast('↩️ Control deshecho','warning');
+  toast(`↩️ ${checkin[key].escuela} — marcado como ausente`, 'warning');
 }
 
 function eliminarCheckin(key) {
-  if(!confirm('¿Eliminar este establecimiento del check-in?')) return;
+  if(!confirm('¿Eliminar este establecimiento del listado?')) return;
   const checkin = DB.get('checkin', {});
   delete checkin[key];
   DB.set('checkin', checkin);
@@ -2992,47 +3300,48 @@ function filterCheckin() {
 }
 
 function renderCheckin() {
-  updateCheckinLabels();
   const checkin = DB.get('checkin', {});
-  const cfg = DB.get('config');
-  const item = cfg.checkinItem || 'Tablet';
   const search = (document.getElementById('ci-search')||{value:''}).value.toLowerCase();
   const allKeys = Object.keys(checkin);
 
   // Stats
-  document.getElementById('ci-stat-verde').textContent = allKeys.filter(k=>checkin[k].estado==='verde').length;
-  document.getElementById('ci-stat-naranja').textContent = allKeys.filter(k=>checkin[k].estado==='naranja').length;
-  document.getElementById('ci-stat-amarillo').textContent = allKeys.filter(k=>checkin[k].estado==='amarillo').length;
-  document.getElementById('ci-stat-pendiente').textContent = allKeys.filter(k=>checkin[k].estado==='pendiente').length;
+  const presentesCount = allKeys.filter(k=>checkin[k].presente).length;
+  const ausentesCount = allKeys.length - presentesCount;
+  document.getElementById('ci-stat-total').textContent = allKeys.length;
+  document.getElementById('ci-stat-presente').textContent = presentesCount;
+  document.getElementById('ci-stat-ausente').textContent = ausentesCount;
 
   const keys = allKeys.filter(k => {
     const c = checkin[k];
-    const matchSearch = !search || (c.escuela+c.nro).toLowerCase().includes(search);
-    const matchFilter = !checkinFilter || c.estado === checkinFilter;
+    const matchSearch = !search || (c.escuela+c.nro+(c.categoria||'')).toLowerCase().includes(search);
+    const estado = c.presente ? 'presente' : 'ausente';
+    const matchFilter = !checkinFilter || estado === checkinFilter;
     return matchSearch && matchFilter;
   });
 
   const container = document.getElementById('checkin-container');
   if(!keys.length) {
-    container.innerHTML = `<div class="empty-state"><div class="icon">📦</div><p>No hay establecimientos.<br>Agregá uno o importá desde Registros.</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No hay establecimientos.<br>Agregá uno o importá desde Registros.</p></div>`;
     return;
   }
 
-  // Sort: verde > naranja > amarillo > pendiente
-  const order = {verde:0,naranja:1,amarillo:2,pendiente:3};
-  keys.sort((a,b) => (order[checkin[a].estado]||3)-(order[checkin[b].estado]||3));
-
-  const estadoLabel = {pendiente:'Sin control',amarillo:'1er control',naranja:'2do control',verde:'Completo'};
-  const estadoEmoji = {pendiente:'⚪',amarillo:'🟡',naranja:'🟠',verde:'🟢'};
+  // Sort: presentes primero, luego ausentes; alfabético dentro de cada grupo
+  keys.sort((a,b) => {
+    const ca = checkin[a], cb = checkin[b];
+    if(ca.presente !== cb.presente) return ca.presente ? -1 : 1;
+    return (ca.escuela||'').localeCompare(cb.escuela||'');
+  });
 
   container.innerHTML = `<div class="ci-grid">${keys.map(k => {
     const c = checkin[k];
-    const n = c.controles.length;
-    const logHtml = c.controles.map((ctrl,i) => 
-      `<div>Control ${i+1}: ${new Date(ctrl.fecha).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} — ${ctrl.operador}</div>`
-    ).join('');
+    const fechaStr = c.fecha ? new Date(c.fecha).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const sinMarcar = !c.fecha;
+    let estadoLabel, estadoColor;
+    if (c.presente) { estadoLabel = '✅ Presente'; estadoColor = '#16a34a'; }
+    else if (sinMarcar) { estadoLabel = '⚪ Sin marcar'; estadoColor = '#6b7c93'; }
+    else { estadoLabel = '❌ Ausente'; estadoColor = '#c2410c'; }
     return `
-    <div class="ci-card ${c.estado}">
+    <div class="ci-card ${c.presente ? 'verde' : 'pendiente'}">
       <button class="ci-delete" onclick="eliminarCheckin('${k}')" title="Eliminar">✕</button>
       <div class="ci-card-header">
         <div>
@@ -3041,36 +3350,34 @@ function renderCheckin() {
         </div>
         <div class="ci-status-dot"></div>
       </div>
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px">${estadoEmoji[c.estado]} ${estadoLabel[c.estado]}</div>
-      <div style="display:flex;gap:4px;margin-bottom:8px">${[1,2,3].map(i=>`
-        <div style="flex:1;height:6px;border-radius:3px;background:${i<=n?(c.estado==='amarillo'&&i===1?'#eab308':c.estado==='naranja'&&i<=2?'#f97316':i<=n?'#22c55e':'#e5e7eb'):'#e5e7eb'}"></div>
-      `).join('')}</div>
-      <div class="ci-controls">
-        ${n<3?`<button class="btn btn-sm" style="background:${n===0?'#1a3a6b':n===1?'#f97316':'#22c55e'};color:white;padding:7px 12px;" onclick="registrarControl('${k}')">
-          ✔ Control ${n+1}
-        </button>`:`<span style="font-size:12px;font-weight:800;color:#22c55e">✅ ${item} entregada</span>`}
-        ${n>0?`<button class="btn btn-ghost btn-sm" onclick="deshacerControl('${k}')" title="Deshacer último control">↩️</button>`:''}
+      ${c.categoria?`<div style="margin-bottom:8px"><span class="chip chip-blue" style="font-size:11px">${c.categoria}</span></div>`:''}
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px;color:${estadoColor}">
+        ${estadoLabel}
       </div>
-      ${logHtml?`<div class="ci-log">${logHtml}</div>`:''}
+      <div class="ci-controls">
+        ${c.presente 
+          ? `<button class="btn btn-ghost btn-sm" onclick="marcarAusente('${k}')">↩️ Marcar ausente</button>`
+          : `<button class="btn btn-sm" style="background:#16a34a;color:white;padding:7px 12px;" onclick="marcarPresente('${k}')">✔ Marcar presente</button>`
+        }
+      </div>
+      ${fechaStr?`<div class="ci-log"><div>👤 Marcado por <strong>${c.operador||'—'}</strong><br>${fechaStr}</div></div>`:''}
     </div>`;
   }).join('')}</div>`;
 }
 
 function exportCheckin() {
   const checkin = DB.get('checkin', {});
-  const cfg = DB.get('config');
-  const item = cfg.checkinItem || 'Tablet';
   const rows = Object.values(checkin).map(c => {
-    const logs = c.controles.map((ctrl,i)=>`Control ${i+1}: ${new Date(ctrl.fecha).toLocaleString('es-AR')} (${ctrl.operador})`).join(' | ');
-    return `"${c.escuela}","${c.nro}","${c.estado}","${c.controles.length}","${logs}"`;
+    const fecha = c.fecha ? new Date(c.fecha).toLocaleString('es-AR') : '';
+    return `"${c.escuela}","${c.nro}","${c.categoria||''}","${c.presente?'Presente':'Ausente'}","${fecha}","${c.operador||''}"`;
   });
-  const csv = '"Establecimiento","Nro","Estado","Controles","Historial"\n' + rows.join('\n');
+  const csv = '"Establecimiento","Nro","Categoría","Estado","Fecha","Compañero"\n' + rows.join('\n');
   const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `mtz_checkin_${item}_${Date.now()}.csv`;
+  a.download = `mtz_presentes_${Date.now()}.csv`;
   a.click();
-  toast(`📊 Check-in exportado`, 'success');
+  toast(`📊 Listado exportado`, 'success');
 }
 
 // ============================================================
