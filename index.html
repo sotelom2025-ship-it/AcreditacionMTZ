@@ -857,9 +857,12 @@
   }
   .mobile-nav-items {
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .mobile-nav-item {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1774,11 +1777,20 @@
       <button class="mobile-nav-item" onclick="showPage('conexion')" id="mnav-conexion">
         <span class="nav-icon">🔗</span>Conexión
       </button>
+      <button class="mobile-nav-item admin-only" onclick="showPage('envivo')" id="mnav-envivo">
+        <span class="nav-icon">🔴</span>En Vivo
+      </button>
       <button class="mobile-nav-item admin-only" onclick="showPage('resumen')" id="mnav-resumen">
         <span class="nav-icon">📊</span>Resumen
       </button>
       <button class="mobile-nav-item admin-only" onclick="showPage('registros')" id="mnav-registros">
         <span class="nav-icon">🗂️</span>Ver Todo
+      </button>
+      <button class="mobile-nav-item admin-only" onclick="showPage('usuarios')" id="mnav-usuarios">
+        <span class="nav-icon">👥</span>Compañeros
+      </button>
+      <button class="mobile-nav-item admin-only" onclick="showPage('sincronizar')" id="mnav-sincronizar">
+        <span class="nav-icon">🔄</span>Sync
       </button>
       <button class="mobile-nav-item admin-only" onclick="showPage('config')" id="mnav-config">
         <span class="nav-icon">⚙️</span>Config
@@ -2026,7 +2038,11 @@ function doLogout() {
 
 function applyRole(role) {
   document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = role==='admin' ? '' : 'none';
+    if (role === 'admin') {
+      el.style.display = (el.tagName === 'BUTTON') ? 'flex' : 'block';
+    } else {
+      el.style.display = 'none';
+    }
   });
 }
 
